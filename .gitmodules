@@ -1,0 +1,3 @@
+[submodule "libfixposix"]
+	path = libfixposix
+	url = https://github.com/sionescu/libfixposix/

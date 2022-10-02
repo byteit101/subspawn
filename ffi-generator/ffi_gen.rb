@@ -472,7 +472,7 @@ end
 def process(file, builder, live: false)
 
 	pp = C::Preprocessor.new
-	pp.include_path = ['fake/', '../libfixposix/src/include', '.']
+	pp.include_path = ["#{Dir.pwd}/", "#{Dir.pwd}/../libfixposix/src/include/", "#{Dir.pwd}/fake/"]
 
 	ast = C::Parser.new.parse(pp.preprocess("#include <fake/fake.h>\n#{File.read file}").gsub(/#[^\n]+$/,"").tap{|x|File.write("/tmp/out", x)})
 

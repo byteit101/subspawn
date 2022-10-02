@@ -7,7 +7,7 @@ Nothing is genericized, and it hews closely to libfixposix.
 
 ```sh
 gem install cast
-ruby ffi_gen.rb ../libfixposix/src/include/lfp.h > ../ffi-bindings-libfixposix/lib/libfixposix-ffi.rb
+ruby ffi_gen.rb ../libfixposix/src/include/lfp.h > ../ffi-bindings-libfixposix/lib/libfixposix/ffi.rb
 ```
 
 ## New verison testing and development

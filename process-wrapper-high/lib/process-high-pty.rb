@@ -1,3 +1,5 @@
+require 'midpty' # TODO: better name
+
 
 module PTY2
 	def self.spawn(command, *args, input: nil, output: nil, error: nil)

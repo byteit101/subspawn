@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="96.044" height="52.686" version="1.1" viewBox="0 0 96.044 52.686" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Glory&amp;display=swap');
+            </style> 
+    </defs>
+ <g transform="translate(-111.33 -524.55)">
+  <path d="m121.16 553.22v8.6133h7.8418v-1.5976h-6.2441v-7.0156z" fill="#b3b3b3" fill-rule="evenodd"/>
+  <g font-size="29.333px" letter-spacing="0px" stroke-width="1px" word-spacing="0px">
+   <text x="116.43502" y="551.32202" fill="#000000" stop-color="#000000" style="line-height:100%;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="116.43502" y="551.32202" font-family="Glory" font-weight="500">sub</tspan></text>
+   <text x="130.09914" y="567.95453" fill="#811728" stop-color="#000000" style="line-height:100%;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="130.09914" y="567.95453" fill="#811728" font-family="Glory" font-weight="500">spawn</tspan></text>
+   <text x="229.04445" y="674.6311" fill="#000000" stop-color="#000000" stroke="#000000" style="line-height:100%;text-decoration-color:#000000;text-decoration-line:none" xml:space="preserve"><tspan x="229.04445" y="674.6311"/></text>
+  </g>
+ </g>
+</svg>

@@ -1,9 +1,9 @@
-require 'midpty' # TODO: better name
+require 'subspawn/posix' # TODO: better name
 
-
-module PTY2
+module SubSpawn
+module PTY
 	def self.spawn(command, *args, input: nil, output: nil, error: nil)
-		w = LFP::RawProcessBuilder
+		w = SubSpawn::POSIX
 		if args.empty?
 			if !command.include?(" ") || !w.which(command).nil?
 				:single
@@ -16,7 +16,7 @@ module PTY2
 		else
 			:multi
 		end
-		m,s = PTY.open
+		m,s = ::PTY.open # TODO: our own pty?
 		#puts "SPAWNING: #{command} -> #{args}"
 		pid = w.new(command, *args).
 			fd(w::StdIn, input || s.fileno).
@@ -34,7 +34,7 @@ module PTY2
 		end
 	end
 	def self.command2args(command, *args)
-		w = LFP::RawProcessBuilder
+		w = SubSpawn::POSIX
 		if args.empty?
 			if !command.include?(" ") || !w.which(command).nil?
 				:single
@@ -49,4 +49,5 @@ module PTY2
 		end
 		[command, *args]
 	end
+end
 end

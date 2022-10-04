@@ -1,9 +1,11 @@
-require 'pty'
 require 'libfixposix'
 
-class LFP::RawProcessBuilder
+module SubSpawn
+class POSIX
 	class SpawnError < RuntimeError
 	end
+
+	OpenFD = Struct.new(:fd, :path, :mode, :flags)
 	
 	def initialize(command, *args, arg0: command)
 		@path = self.class.which(command)
@@ -12,12 +14,12 @@ class LFP::RawProcessBuilder
 		@fd_map = {}
 		@fd_keeps = []
 		@fd_closes = []
-		# TODO: expose opens?
+		@fd_opens = []
 		@signal_mask = @signal_default = nil
 		@uid = @gid = @cwd = nil
 		@sid = false
 		@pgroup = nil
-		@env = none # TODO: ENV
+		@env = :default
 		@ctty = nil
 	end
 	attr_writer :signal_mask, :signal_default, :uid, :gid, :cwd
@@ -37,6 +39,12 @@ class LFP::RawProcessBuilder
 		end.to_h
 		@fd_keeps.each{|x| fd_check(x)}
 		@fd_closes.each{|x| fd_check(x)}
+		@fd_opens.each{|x|
+			fd_check(x.fd)
+			raise SpawnError, "Invalid FD open: Not a number: #{x.mode.inspect}" unless x.mode.is_a? Integer
+			raise SpawnError, "Invalid FD open: Not a flag: #{x.flags.inspect}" unless x.flags.is_a? Integer
+			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? path
+		}
 		
 		raise SpawnError, "Invalid cwd path" unless @cwd.nil? or Dir.exist?(@cwd = ensure_file_string(@cwd))
 		
@@ -59,7 +67,9 @@ class LFP::RawProcessBuilder
 				# set up file descriptors
 				
 				@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
-				# TODO: add opens?
+				@fd_opens.each {|opn|
+					sfa.addopen(opn.fd, opn.path, opn.flags, opn.mode)
+				}
 				@fd_map.map{|k, v| [k, fd_number(v)] }.each do |dest, src|
 					sfa.adddup2(src, dest)
 				end
@@ -81,8 +91,7 @@ class LFP::RawProcessBuilder
 				# set up working dir
 				sa.cwd = @cwd if @cwd
 				
-				# TODO: ENV
-				
+				# allocate output (pid)
 				FFI::MemoryPointer.new(:int, 1) do |pid|
 					argv_str = @argv.map{|a|FFI::MemoryPointer.from_string a} + [nil] # null end of argv
 					FFI::MemoryPointer.new(:pointer, argv_str.length) do |argv_holder|
@@ -90,15 +99,16 @@ class LFP::RawProcessBuilder
 						# ARGV
 						argv_holder.write_array_of_pointer argv_str
 						
-						# TODO: ARGP
-						envp_holder = LFP.get_environ()
-						
-						ret = LFP.spawn(pid, @path, argv_holder, envp_holder, sfa, sa)
-						if ret != 0
-							#Errno.const_get(Errno.constants.find{|x| Errno.const_get(x)::Errno == ret})
-							SystemCallError.new("Spawn Error: #{ret}", errno)
+						# ARGP/ENV
+						make_envp do |envp_holder|
+
+							# Launch!
+							ret = LFP.spawnp(pid, @path, argv_holder, envp_holder, sfa, sa)
+							if ret != 0
+								SystemCallError.new("Spawn Error: #{ret}", errno)
+							end
+							out_pid = pid.read_int
 						end
-						out_pid = pid.read_int
 					end
 				end
 			ensure
@@ -120,6 +130,13 @@ class LFP::RawProcessBuilder
 		end
 		self
 	end
+
+	def fd_open(number, path, mode, flags=0)
+		num = number.is_a?(Symbol) ? Std[number] : number.to_i
+		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
+		@fd_opens << OpenFD.new(number, path, mode, flags)
+		self
+	end
 	def fd_keep(io_or_fd)
 		@fd_keep << io_or_fd
 		self
@@ -132,16 +149,17 @@ class LFP::RawProcessBuilder
 		@argv[0] = string.to_s
 		self
 	end
-	def env_clear!
-		# TODO
+	def env_reset!
+		@env = :default
 		self
 	end
 	def env(key, value)
-		# TODO
+		@env = ENV.to_h.dup if @env == :default
+		@env[key.to_s] = value.to_s
 		self
 	end
 	def env=(hash)
-		# TODO
+		@env = hash.to_h
 		self
 	end
 	def signal_mask(sigmask_ptr)
@@ -196,8 +214,16 @@ class LFP::RawProcessBuilder
 		end
 	end
 	private
-	def none
-		@@none ||= Object.new
+	def make_envp
+		if @env == :default
+			yield LFP.get_environ
+		else
+			strings = @env.map{|k,v|FFI::MemoryPointer.from_string "#{k}=#{v}"} + [nil] # null end of argp
+			FFI::MemoryPointer.new(:pointer, strings.length) do |argp_holder|
+				argp_holder.write_array_of_pointer strings
+				yield argp_holder
+			end
+		end
 	end
 	def ensure_file_string(path)
 		if defined? JRUBY_VERSION # accept File and Path java objects
@@ -247,4 +273,5 @@ class LFP::RawProcessBuilder
 	  end
 	  nil
 	end
+end
 end

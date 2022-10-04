@@ -5,7 +5,7 @@
 module LFP
 	module LFPFile
 		def self.local_so
-			%w{libfixposix.so.3 libfixposix.so fixposix.so}
+			%w{libfixposix.so.3 libfixposix.so fixposix.so fixposix}
 		end
 	end
 end

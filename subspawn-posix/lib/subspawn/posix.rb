@@ -1,9 +1,9 @@
 require 'libfixposix'
-
+require 'subspawn/posix/version'
 module SubSpawn
+class SpawnError < RuntimeError
+end
 class POSIX
-	class SpawnError < RuntimeError
-	end
 
 	OpenFD = Struct.new(:fd, :path, :mode, :flags)
 	
@@ -131,7 +131,7 @@ class POSIX
 		self
 	end
 
-	def fd_open(number, path, mode, flags=0)
+	def fd_open(number, path, flags = 0, mode=0)
 		num = number.is_a?(Symbol) ? Std[number] : number.to_i
 		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
 		@fd_opens << OpenFD.new(number, path, mode, flags)

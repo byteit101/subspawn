@@ -1,0 +1,89 @@
+# frozen_string_literal: true
+require "mini_portile2"
+require "rake/clean"
+require 'rubygems/package_task'
+
+
+# currently supported binaries
+targets = [
+	%w{x86-linux i686-linux-gnu}, # UNTESTED
+	%w{x86_64-linux x86_64-linux-gnu},
+	%w{arm64-linux arm64-linux-gnu}, # UNTESTED
+	%w{x86_64-darwin x86_64-darwin}, # UNTESTED
+	%w{arm64-darwin arm64-darwin}, # UNTESTED
+	# TODO: add other platforms, like the BSD's
+]
+
+# define tab-completion helpers
+targets.each do |(platform, host)|
+	desc "Build gem for #{platform} (#{host})"
+	task "build:#{platform}" do
+		task(:target).invoke(platform)
+		task(:gem).invoke(platform)
+	end
+	if platform != host
+		desc "Build gem for #{platform} (#{host})"
+		task "build:#{host}" do
+			task(:target).invoke(platform)
+			task(:gem).invoke(platform)
+		end
+	end
+end
+
+saved_target_arg = nil # rake SHOULD pass down args to dependant tasks, but gem isn't passing them through
+
+desc "Set the target for 'gem' as [target]. Call 'gem' task after (ie `rake target[x86_64-linux] gem`)"
+task :target, [:target] do |_, args|
+	platform, host = targets.find{|x| x.include? args[:target] }
+	raise "Missing platform, try target[platform-to-build], see rake -T for build: targets" if host.nil?
+	spec = Gem::Specification::load("ffi-binary-libfixposix.gemspec").dup
+	spec.platform = Gem::Platform.new(platform)
+	spec.files[-1] = spec.files.last.split(".").first + (platform.to_s.include?("darwin") ? ".dylib"  : ".so")
+	task = Gem::PackageTask.new(spec)
+	saved_target_arg = host
+	puts "Generating gem task for #{platform}/#{host}"
+	task.define
+end
+
+desc 'Builds the local libfixposix binary for the curent or specified host'
+task :binary, [:target] do |_, args|
+	recipe = MiniPortile.new("libfixposix", "current") # version doesn't matterz
+	host = args[:target] || saved_target_arg || recipe.original_host
+	platform, host = targets.find{|x| x.include? host } # find our host
+	puts "Building using host triple #{host}"
+
+	recipe.source_directory = "../libfixposix"
+	recipe.configure_options += ["--enable-shared", "--disable-static", "--without-debug"]
+
+	suffix = host.include?("darwin") ? "dylib" : "so"
+	recipe.host = host
+	recipe.cook # always rebuild, never cache
+	#recipe.activate
+	cp(
+		File.join(recipe.path, "lib/libfixposix.#{suffix}"), 
+		File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}"), 
+		verbose: true
+	)
+
+	# ~140k -> ~40k
+	sh "strip -s #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}").inspect}"
+end
+
+
+# Make gem depend on binary
+task gem: :binary
+
+desc "Build the gem into the pkg directory. (local platform build)"
+task "gem:local" => :binary do
+	task = Gem::PackageTask.new(Gem::Specification::load("ffi-binary-libfixposix.gemspec"))
+	task.define
+	task(:gem).invoke
+end
+
+CLOBBER.include("pkg")
+CLEAN.include(
+	"ports",
+	"tmp",
+	"lib/libfixposix/binary/libfixposix.so",
+	"lib/libfixposix/binary/libfixposix.dylib"
+)

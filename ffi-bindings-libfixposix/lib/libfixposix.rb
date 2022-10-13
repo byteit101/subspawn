@@ -5,9 +5,17 @@
 module LFP
 	module LFPFile
 		def self.local_so
-			%w{libfixposix.so.3 libfixposix.so fixposix.so fixposix}
+			list = []
+			list += ENV["LIBFIXPOSIX_PATH"].split(":") if ENV["LIBFIXPOSIX_PATH"]
+			list << "fixposix"
+			list
 		end
 	end
 end
 require_relative 'libfixposix/ffi'
 require_relative "libfixposix/version"
+begin
+	require "libfixposix/binary"
+rescue LoadError
+	# no binary installed, use system wide or ENV var
+end

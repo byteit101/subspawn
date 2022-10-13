@@ -43,6 +43,7 @@ task :target, [:target] do |_, args|
 	task.define
 	task(:binary).invoke(platform)
 	task(:gem).invoke(platform)
+	Bundler.ui.confirm "#{spec.name} #{spec.version} built to pkg/#{File.basename(Dir[File.join(__dir__, "pkg", "#{spec.name}-*.gem")].sort_by {|f| File.mtime(f) }.last)}."
 end
 
 desc 'Builds the local libfixposix binary for the curent or specified host'
@@ -72,9 +73,11 @@ end
 
 desc "Build the gem into the pkg directory. (local platform build)"
 task "local" => :binary do
-	task = Gem::PackageTask.new(Gem::Specification::load("ffi-binary-libfixposix.gemspec"))
+	spec = Gem::Specification::load("ffi-binary-libfixposix.gemspec")
+	task = Gem::PackageTask.new(spec)
 	task.define
 	task(:gem).invoke
+	Bundler.ui.confirm "#{spec.name} #{spec.version} built to pkg/#{File.basename(Dir[File.join(__dir__, "pkg", "#{spec.name}-*.gem")].sort_by {|f| File.mtime(f) }.last)}."
 end
 
 CLOBBER.include("pkg")

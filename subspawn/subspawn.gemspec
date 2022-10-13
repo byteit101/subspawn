@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "subspawn/version"
+require_relative "lib/subspawn/version"
 
 Gem::Specification.new do |spec|
   spec.name = "subspawn"
@@ -33,7 +33,7 @@ Gem::Specification.new do |spec|
 
   # Uncomment to register a new dependency of your gem
   spec.add_dependency "subspawn-posix", "~> 0.1"
-  spec.add_dependency "ffi", ">= 0.15"
+  spec.add_dependency "ffi", "~> 1.0"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

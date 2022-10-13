@@ -22,3 +22,6 @@ module LFP
 		}
 	end
 end
+
+# now configure
+ENV["LIBFIXPOSIX_PATH"] = ((ENV["LIBFIXPOSIX_PATH"]&.split(":") || []) + [LFP::Binary::PATH]).uniq.join(":")

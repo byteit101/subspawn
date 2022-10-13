@@ -96,12 +96,14 @@ module SubSpawn
 			when :flags # TODO: signals
 
 			when /rlimit_(.*)/ # P.s
-				# TODO: something
-"
-				resource limit: resourcename is core, cpu, data, etc.  See Process.setrlimit.
-				:rlimit_resourcename => limit
-				:rlimit_resourcename => [cur_limit, max_limit]
-				"
+				name = $1
+				keys = [value].flatten
+				base.rlimit(name, *keys)
+			when :rlimit # NEW?
+				raise ArgumentError, "rlimit as a hash must be a hash" unless value.respond_to? :to_h
+				value.to_h.each do |key, values|
+					base.rlimit(key, *[values].flatten)
+				end
 			when :umask # P.s
 				raise ArgumentError, "umask must be numeric" unless value.is_a? Integer
 				base.umask = value

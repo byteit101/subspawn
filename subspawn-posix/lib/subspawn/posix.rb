@@ -21,6 +21,8 @@ class POSIX
 		@pgroup = nil
 		@env = :default
 		@ctty = nil
+		@rlimits = {}
+		@umask = nil
 	end
 	attr_writer :signal_mask, :signal_default, :uid, :gid, :cwd
 	
@@ -74,6 +76,15 @@ class POSIX
 					sfa.adddup2(src, dest)
 				end
 				@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
+
+				unless @rlimits.empty?
+					rlimit = Internal::Rlimit.new
+					@rlimits.each {|key, (cur, max)|
+						rlimit[:rlim_cur] = cur.to_i
+						rlimit[:rlim_max] = max.to_i
+						sfa.setrlimit(key.to_i, rlimit)
+					}
+				end
 				
 				# set up signals
 				sa.sigmask = @signal_mask if @signal_mask
@@ -83,6 +94,7 @@ class POSIX
 				sa.uid = @uid.to_i if @uid
 				sa.gid = @gid.to_i if @gid
 				sa.pgroup = @pid.to_i if @pid
+				sa.umask = @umask.to_i if @umask
 				
 				# Set up terminal control
 				sa.setsid if @sid
@@ -162,14 +174,20 @@ class POSIX
 		@env = hash.to_h
 		self
 	end
-	def signal_mask(sigmask_ptr)
+	def signal_mask(sigmask_ptr)# TODO: terrible API
 		@signal_mask = sigmask_ptr
 		self
 	end
-	def signal_default(sigmask_ptr)
+	def signal_default(sigmask_ptr) # TODO: terrible API
 		@signal_default = sigmask_ptr
 		self
 	end
+	def umask=(value)
+		@umask = value.nil? ? nil : value.to_i
+		self
+	end
+	alias :umask :umask=
+
 	def owner(uid: none, gid: none)
 		@uid = uid unless uid.equals? none
 		@gid = gid unless gid.equals? none
@@ -200,6 +218,22 @@ class POSIX
 	alias :ctty= :tty
 	alias :ctty :tty
 	
+
+	def rlimit(key, cur, max=cur)
+		require 'subspawn/posix/ffi_helper'
+		key = if key.is_a? Inteter
+			key.to_i
+		else# TODO: is upcase ok?
+			Process.const_get("RLIMIT_#{key.to_s.upcase}")
+			#raise SpawnError, "Invaild rlimit key: #{key}"
+		end
+		raise SpawnError, "rlimit value was nil" if cur.nil?
+		cur = ensure_rlimit(key, cur)
+		max = ensure_rlimit(key, max || cur)
+		@rlimits[key] = [cur, max]
+		self
+	end
+	alias :setrlimit :rlimit
 	
 	def validate
 		validate! rescue false
@@ -214,6 +248,15 @@ class POSIX
 		end
 	end
 	private
+
+	def ensure_rlimit(key, value)
+		#if key.nil?
+		#	Process.getrlimit(key).last # if here, we are requesting max, as it was nil
+		#end
+		return value.to_i if value.is_a? Integer
+		Process.const_get("RLIMIT_#{value.to_s.upcase}") # TODO: is upcase ok?
+	end
+
 	def make_envp
 		if @env == :default
 			yield LFP.get_environ
@@ -275,3 +318,6 @@ class POSIX
 	end
 end
 end
+
+
+

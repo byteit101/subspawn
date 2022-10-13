@@ -548,6 +548,6 @@ end
 
 #puts builder.to_s
 
-puts builder.export("lfp", ["spawnattr", "spawn_file_actions"], {"spawnattr" => "spawn"}, "LFP", "LFPFile.local_so", "0.4.3") unless live
+puts builder.export("lfp", ["spawnattr", "spawn_file_actions"], {"spawnattr" => "spawn"}, "LFP", "LFPFile.local_so", "0.5.0-dev") unless live
 
 

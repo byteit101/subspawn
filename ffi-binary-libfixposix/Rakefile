@@ -19,20 +19,18 @@ targets.each do |(platform, host)|
 	desc "Build gem for #{platform} (#{host})"
 	task "build:#{platform}" do
 		task(:target).invoke(platform)
-		task(:gem).invoke(platform)
 	end
 	if platform != host
 		desc "Build gem for #{platform} (#{host})"
 		task "build:#{host}" do
 			task(:target).invoke(platform)
-			task(:gem).invoke(platform)
 		end
 	end
 end
 
 saved_target_arg = nil # rake SHOULD pass down args to dependant tasks, but gem isn't passing them through
 
-desc "Set the target for 'gem' as [target]. Call 'gem' task after (ie `rake target[x86_64-linux] gem`)"
+desc "Build the gem for [target] ex: `rake target[x86_64-linux]`"
 task :target, [:target] do |_, args|
 	platform, host = targets.find{|x| x.include? args[:target] }
 	raise "Missing platform, try target[platform-to-build], see rake -T for build: targets" if host.nil?
@@ -43,6 +41,8 @@ task :target, [:target] do |_, args|
 	saved_target_arg = host
 	puts "Generating gem task for #{platform}/#{host}"
 	task.define
+	task(:binary).invoke(platform)
+	task(:gem).invoke(platform)
 end
 
 desc 'Builds the local libfixposix binary for the curent or specified host'
@@ -70,11 +70,8 @@ task :binary, [:target] do |_, args|
 end
 
 
-# Make gem depend on binary
-task gem: :binary
-
 desc "Build the gem into the pkg directory. (local platform build)"
-task "gem:local" => :binary do
+task "local" => :binary do
 	task = Gem::PackageTask.new(Gem::Specification::load("ffi-binary-libfixposix.gemspec"))
 	task.define
 	task(:gem).invoke

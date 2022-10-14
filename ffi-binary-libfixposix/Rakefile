@@ -10,7 +10,7 @@ targets = [
 	%w{x86-linux i686-linux-gnu}, # UNTESTED
 	%w{x86_64-linux x86_64-linux-gnu},
 	%w{arm64-linux arm64-linux-gnu}, # UNTESTED
-	%w{x86_64-darwin x86_64-darwin}, # UNTESTED
+	%w{x86_64-darwin x86_64-apple-darwin}, # UNTESTED
 	%w{arm64-darwin arm64-darwin}, # UNTESTED
 	# TODO: add other platforms, like the BSD's
 ]
@@ -53,7 +53,7 @@ task :binary, [:target] do |_, args|
 	host = args[:target] || saved_target_arg || recipe.original_host
 	recipe.host = host if host
 	host = host || RbConfig.expand("$(target_cpu)-$(target_os)") # mac os doesn't have it?
-	if host.match(/^(.*[^\d])[\d.]+$/)
+	if host.match(/^(.*darwin)[\d.]+$/)
 		host = $1 # trim off darwin19 to just darwin
 	end
 	puts "Searching for host '#{host}'..."

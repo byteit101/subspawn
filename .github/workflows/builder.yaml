@@ -25,7 +25,7 @@ jobs:
 
 
       - name: Install autoconf and automake for macOS
-        if: matrix.runner == 'macos-latest'
+        if: matrix.os == 'macos-latest'
         run: brew install autoconf automake libtool
 
       - name: Install dependencies

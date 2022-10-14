@@ -36,5 +36,5 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: gems
-          path: */pkg/*.gem
+          path: '*/pkg/*.gem'
           if-no-files-found: error 

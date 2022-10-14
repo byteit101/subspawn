@@ -3,8 +3,9 @@ require 'ffi'
 desc 'Generate FFI interface'
 task "generate:ffi" do
 	cd 'libfixposix/src/include/lfp' do
-		# values don't matter
-		File.write("time.h", File.read("time.h.in").gsub("@HAVE_CLOCKID_T@", "1").gsub("@HAVE_CLOCK_GETTIME@", "1"))
+		# values don't matter for @ vars, but clockid_t isn't defined on mac, so we can't use
+		# it anywhere. Signed int on Linux
+		File.write("time.h", File.read("time.h.in").gsub("@HAVE_CLOCKID_T@", "1").gsub("@HAVE_CLOCK_GETTIME@", "1").gsub("clockid_t", "int"))
 	end
 	cd 'ffi-generator' do
 		sh 'ruby ffi_gen.rb ../libfixposix/src/include/lfp.h > ../ffi-bindings-libfixposix/lib/libfixposix/ffi.rb'

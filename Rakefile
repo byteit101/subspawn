@@ -9,6 +9,10 @@ task "generate:ffi" do
 	cd 'ffi-generator' do
 		sh 'ruby ffi_gen.rb ../libfixposix/src/include/lfp.h > ../ffi-bindings-libfixposix/lib/libfixposix/ffi.rb'
 	end
+	# only needed once
+	cd 'libfixposix' do
+		sh 'autoreconf -i -f'
+	end
 end
 
 desc "Build all gems (doesn't install)"

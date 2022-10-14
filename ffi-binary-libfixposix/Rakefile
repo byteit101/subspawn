@@ -51,17 +51,19 @@ desc 'Builds the local libfixposix binary for the curent or specified host'
 task :binary, [:target] do |_, args|
 	recipe = MiniPortile.new("libfixposix", "current") # version doesn't matterz
 	host = args[:target] || saved_target_arg || recipe.original_host
+	recipe.host = host if host
+	host ||= RbConfig::CONFIG["host_os"] # mac os doesn't have it
+
 	platform, host = targets.find{|x| x.include? host } # find our host
 	puts "Building using host triple #{host}"
 
 	recipe.source_directory = "../libfixposix"
 	recipe.configure_options += ["--enable-shared", "--disable-static", "--without-debug"]
-	if (host||"").include? "i686" # TODO: more robust
+	if host.include? "i686" # TODO: more robust
 		recipe.configure_options += ["CFLAGS=-m32", "CXXFLAGS=-m32", "LDFLAGS=-m32", "--host=#{host}"]
 	end
 
-	suffix = (host || RbConfig::CONFIG["target_os"]).include?("darwin") ? "dylib" : "so"
-	recipe.host = host if host
+	suffix = host.include?("darwin") ? "dylib" : "so"
 	recipe.cook # always rebuild, never cache
 	#recipe.activate
 	cp(

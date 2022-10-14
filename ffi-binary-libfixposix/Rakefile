@@ -2,6 +2,7 @@
 require "mini_portile2"
 require "rake/clean"
 require 'rubygems/package_task'
+require 'bundler'
 
 
 # currently supported binaries
@@ -9,7 +10,7 @@ targets = [
 	%w{x86-linux i686-linux-gnu}, # UNTESTED
 	%w{x86_64-linux x86_64-linux-gnu},
 	%w{arm64-linux arm64-linux-gnu}, # UNTESTED
-	%w{x86_64-darwin x86_64-darwin}, # UNTESTED
+	%w{x86_64-darwin x86_64-apple-darwin}, # UNTESTED
 	%w{arm64-darwin arm64-darwin}, # UNTESTED
 	# TODO: add other platforms, like the BSD's
 ]
@@ -50,14 +51,23 @@ desc 'Builds the local libfixposix binary for the curent or specified host'
 task :binary, [:target] do |_, args|
 	recipe = MiniPortile.new("libfixposix", "current") # version doesn't matterz
 	host = args[:target] || saved_target_arg || recipe.original_host
+	recipe.host = host if host
+	host = host || RbConfig.expand("$(target_cpu)-$(target_os)") # mac os doesn't have it?
+	if host.match(/^(.*darwin)[\d.]+$/)
+		host = $1 # trim off darwin19 to just darwin
+	end
+	puts "Searching for host '#{host}'..."
+
 	platform, host = targets.find{|x| x.include? host } # find our host
 	puts "Building using host triple #{host}"
 
 	recipe.source_directory = "../libfixposix"
 	recipe.configure_options += ["--enable-shared", "--disable-static", "--without-debug"]
+	if host.include? "i686" # TODO: more robust
+		recipe.configure_options += ["CFLAGS=-m32", "CXXFLAGS=-m32", "LDFLAGS=-m32", "--host=#{host}"]
+	end
 
 	suffix = host.include?("darwin") ? "dylib" : "so"
-	recipe.host = host
 	recipe.cook # always rebuild, never cache
 	#recipe.activate
 	cp(
@@ -67,7 +77,7 @@ task :binary, [:target] do |_, args|
 	)
 
 	# ~140k -> ~40k
-	sh "strip -s #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}").inspect}"
+	sh "strip #{suffix == "dylib" ? "-ru" : "-s"} #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}").inspect}"
 end
 
 

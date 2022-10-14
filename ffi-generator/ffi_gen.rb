@@ -474,7 +474,7 @@ def process(file, builder, live: false)
 	pp = C::Preprocessor.new
 	pp.include_path = ["#{Dir.pwd}/", "#{Dir.pwd}/../libfixposix/src/include/", "#{Dir.pwd}/fake/"]
 
-	ast = C::Parser.new.parse(pp.preprocess("#include <fake/fake.h>\n#{File.read file}").gsub(/#[^\n]+$/,"").tap{|x|File.write("/tmp/out", x)})
+	ast = C::Parser.new.parse(pp.preprocess("#include <fake/fake.h>\n#{File.read file}").tap{|x|File.write("/tmp/out", x)}.gsub(/#[^\n]+$/,""))
 
 	ast.entities.each do |ent|
 		ent.declarators.each do |decl|

@@ -1,3 +1,5 @@
 [submodule "libfixposix"]
 	path = libfixposix
-	url = https://github.com/sionescu/libfixposix/
+	url = https://github.com/byteit101/libfixposix/
+
+# Temporary url due to required PR's. Please change back eventually

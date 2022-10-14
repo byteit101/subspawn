@@ -77,7 +77,7 @@ task "ci:build" => %w{clean generate:ffi build} do
 			darwin: ["x86_64"],
 			linux: ["x86", "x86_64"], #, "arm"]
 		}
-		target_os = RbConfig::CONFIG["target_os"]
+		target_os = RbConfig::CONFIG["target_os"].match(/^([^\d]+)/)[1] # strip any trailing versions, like darwin19
 		config = configs[target_os.to_sym]
 		raise "Target OS not found in configuration: #{target_os}" unless config
 		config.each do |config|

@@ -1,4 +1,4 @@
-name: Build
+name: Build Artifacts
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  build-artifacts:
     strategy:
       matrix:
         # TODO: probablu use older ones so that it runs on older ones

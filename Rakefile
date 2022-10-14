@@ -89,4 +89,8 @@ task "ci:build" => %w{clean generate:ffi build} do
 			cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
 		end
 	end
+	# now copy the other artifacts
+	%w{ffi-bindings-libfixposix subspawn-posix subspawn}.each do |folder|
+		cp Dir["#{folder}/pkg/*.gem"], "ci-output/pkg/"
+	end
 end

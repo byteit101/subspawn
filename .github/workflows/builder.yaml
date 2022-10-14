@@ -41,13 +41,13 @@ jobs:
       - name: Attach shared libraries
         uses: actions/upload-artifact@v3
         with:
-          name: shared-library
+          name: shared-libraries
           path: ci-output/lib/
           if-no-files-found: error 
 
       - uses: actions/upload-artifact@v3
         name: Attach gems
         with:
-          name: gems
-          path: '*/pkg/*.gem'
+          name: all-gems
+          path: ci-output/pkg/
           if-no-files-found: error 

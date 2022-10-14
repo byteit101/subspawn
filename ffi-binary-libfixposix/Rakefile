@@ -56,7 +56,7 @@ task :binary, [:target] do |_, args|
 
 	recipe.source_directory = "../libfixposix"
 	recipe.configure_options += ["--enable-shared", "--disable-static", "--without-debug"]
-	if host.include? "i686" # TODO: more robust
+	if (host||"").include? "i686" # TODO: more robust
 		recipe.configure_options += ["CFLAGS=-m32", "CXXFLAGS=-m32", "LDFLAGS=-m32", "--host=#{host}"]
 	end
 

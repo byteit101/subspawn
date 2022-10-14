@@ -1,3 +1,4 @@
+require 'ffi'
 
 desc 'Generate FFI interface'
 task "generate:ffi" do
@@ -37,7 +38,7 @@ task default: :dev
 
 
 desc "Clean up everything"
-task "build" do
+task "clean" do
 	cd "ffi-bindings-libfixposix" do
 		sh 'rake clobber'
 	end
@@ -49,5 +50,29 @@ task "build" do
 	end
 	cd "subspawn" do
 		sh 'rake clobber'
+	end
+end
+
+
+desc "CI actions"
+task "ci:build" => %w{clean generate:ffi build} do
+	rm_rf "ci-output"
+
+	cd "ffi-binary-libfixposix" do
+		configs = {
+			darwin: ["x86_64"],
+			linux: ["x86", "x86_64"], #, "arm"]
+		}
+		target_os = RbConfig::CONFIG["target_os"]
+		config = configs[target_os.to_sym]
+		raise "Target OS not found in configuration: #{target_os}" unless config
+		config.each do |config|
+			sh "rake clobber build:#{config}-#{target_os}"
+			destdir = "../ci-output/lib/#{config}-#{target_os}/"
+			mkdir_p destdir
+			cp LFP::Binary::PATH, destdir
+			mkdir_p "../ci-output/pkg/"
+			cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
+		end
 	end
 end

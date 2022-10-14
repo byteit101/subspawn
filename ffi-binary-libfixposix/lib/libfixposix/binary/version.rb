@@ -12,6 +12,10 @@ module LFP
 		else # TODO: all .so?
 			"libfixposix.so"
 		end
-		PATH = File.join(__dir__, NAME)
+		PATH = if RUBY_PLATFORM == "java"
+			File.join(__dir__, "all", RbConfig.expand("$(target_cpu)-$(target_os)"), NAME)
+		else
+			File.join(__dir__, NAME)
+		end
 	end
 end

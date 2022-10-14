@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, ci-test ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        # TODO: probablu use older ones so that it runs on older ones
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on:  ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.117.0
+        with:
+          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Build binary & Gems
+        run: bundle exec rake ci:build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: shared-library
+          path: ci-output/lib/
+          if-no-files-found: error 
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: gems
+          path: */pkg/*.gem
+          if-no-files-found: error 

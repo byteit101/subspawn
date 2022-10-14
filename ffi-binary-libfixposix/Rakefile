@@ -56,8 +56,8 @@ task :binary, [:target] do |_, args|
 	recipe.source_directory = "../libfixposix"
 	recipe.configure_options += ["--enable-shared", "--disable-static", "--without-debug"]
 
-	suffix = host.include?("darwin") ? "dylib" : "so"
-	recipe.host = host
+	suffix = (host || RbConfig::CONFIG["target_os"]).include?("darwin") ? "dylib" : "so"
+	recipe.host = host if host
 	recipe.cook # always rebuild, never cache
 	#recipe.activate
 	cp(

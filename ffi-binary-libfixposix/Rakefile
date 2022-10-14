@@ -52,10 +52,11 @@ task :binary, [:target] do |_, args|
 	recipe = MiniPortile.new("libfixposix", "current") # version doesn't matterz
 	host = args[:target] || saved_target_arg || recipe.original_host
 	recipe.host = host if host
-	host = host || RbConfig::CONFIG["host_os"] || RbConfig::CONFIG["target_os"] # mac os doesn't have it
-	if host.nil?
+	host = host || RbConfig.expand("$(host_cpu)-$(host_os)") # mac os doesn't have it
+	if true
 		p RbConfig::CONFIG
 	end
+	puts "Searching for host '#{host}'..."
 
 	platform, host = targets.find{|x| x.include? host } # find our host
 	puts "Building using host triple #{host}"

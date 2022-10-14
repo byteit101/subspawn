@@ -55,7 +55,9 @@ end
 
 
 desc "CI actions"
-task "ci:build" => %w{clean generate:ffi build} do
+task "ci:build" => %w{clean} do
+	task("generate:ffi").invoke # must be done after clean, which github ci doesn't like doing
+	task(:build).invoke # must be done after generate:ffi, which  github ci doesn't like doing
 	rm_rf "ci-output"
 
 	cd "ffi-binary-libfixposix" do

@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-
+require 'ffi'
 begin
 require_relative "lib/libfixposix/version"
 rescue FFI::NotFoundError

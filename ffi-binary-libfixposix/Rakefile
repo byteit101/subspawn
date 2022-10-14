@@ -2,6 +2,7 @@
 require "mini_portile2"
 require "rake/clean"
 require 'rubygems/package_task'
+require 'bundler'
 
 
 # currently supported binaries
@@ -55,6 +56,9 @@ task :binary, [:target] do |_, args|
 
 	recipe.source_directory = "../libfixposix"
 	recipe.configure_options += ["--enable-shared", "--disable-static", "--without-debug"]
+	if host.include? "i686" # TODO: more robust
+		recipe.configure_options += ["CFLAGS=-m32", "CXXFLAGS=-m32", "LDFLAGS=-m32"]
+	end
 
 	suffix = (host || RbConfig::CONFIG["target_os"]).include?("darwin") ? "dylib" : "so"
 	recipe.host = host if host

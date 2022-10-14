@@ -67,7 +67,7 @@ task :binary, [:target] do |_, args|
 	)
 
 	# ~140k -> ~40k
-	sh "strip -s #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}").inspect}"
+	sh "strip #{suffix == "dylib" ? "-ru" : "-s"} #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}").inspect}"
 end
 
 

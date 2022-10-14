@@ -30,7 +30,7 @@ jobs:
 
       - name: Install multilib for Ubuntu
         if: matrix.os == 'ubuntu-latest'
-        run: apt install gcc-multilib
+        run: sudo apt install -y gcc-multilib
 
       - name: Install dependencies
         run: bundle install

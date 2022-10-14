@@ -10,7 +10,12 @@ task "generate:ffi" do
 	cd 'ffi-generator' do
 		sh 'ruby ffi_gen.rb ../libfixposix/src/include/lfp.h > ../ffi-bindings-libfixposix/lib/libfixposix/ffi.rb'
 	end
-	# only needed once
+
+	cd 'libfixposix/src/include/lfp' do
+		# let it be re-configured for this system
+		rm_rf "time.h"
+	end
+	# only needed once, really
 	cd 'libfixposix' do
 		sh 'autoreconf -i -f'
 	end

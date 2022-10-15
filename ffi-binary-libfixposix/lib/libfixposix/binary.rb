@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 require 'ffi'
-require_relative './binary/version'
+require 'libfixposix/binary/version'
 
 module LFP
 	module Binary
@@ -24,4 +24,4 @@ module LFP
 end
 
 # now configure
-ENV["LIBFIXPOSIX_PATH"] = ((ENV["LIBFIXPOSIX_PATH"]&.split(":") || []) + [LFP::Binary::PATH]).uniq.join(":")
+ENV["LIBFIXPOSIX_PATH"] = ((ENV["LIBFIXPOSIX_PATH"]&.split(";;") || []) + [LFP::Binary::PATH]).uniq.join(";;")

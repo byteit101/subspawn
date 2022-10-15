@@ -48,6 +48,9 @@ module SubSpawn
 			raise SpawnError, "SubSpawn only accepts arrays #LINK TODO" if command.include? " " 
 			command = [command]
 		end
+		unless opt.is_a? Hash # TODO: fix this check up with new parsing
+			raise ArgumentError, "Second argument must be a hash, did you mean to use spawn([#{command.inspect}, #{opt.inspect}]) ?"
+		end
 		fds = []
 		compat = false
 		env_opts = {base: ENV, set: false, deltas: nil, only: false}
@@ -121,11 +124,11 @@ module SubSpawn
 				warn "Unknown SubSpawn argument #{key.inspect}. Ignoring"
 			end
 		end
-		if env_options[:set]
-			base.env = if  env_options[:only]
-				env_options[:deltas].to_h
+		if env_opts[:set]
+			base.env = if  env_opts[:only]
+				env_opts[:deltas].to_h
 			else
-				env_options[:base].to_h.merge(env_options[:deltas].to_h)
+				env_opts[:base].to_h.merge(env_opts[:deltas].to_h)
 			end
 		end
 		# parse and clean up fd descriptors

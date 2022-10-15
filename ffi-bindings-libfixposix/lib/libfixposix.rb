@@ -6,14 +6,14 @@ module LFP
 	module LFPFile
 		def self.local_so
 			list = []
-			list += ENV["LIBFIXPOSIX_PATH"].split(":") if ENV["LIBFIXPOSIX_PATH"]
+			list += ENV["LIBFIXPOSIX_PATH"].split(";;") if ENV["LIBFIXPOSIX_PATH"]
 			list << "fixposix"
 			list
 		end
 	end
 end
-require_relative 'libfixposix/ffi'
-require_relative "libfixposix/version"
+require "libfixposix/ffi"
+require "libfixposix/version"
 begin
 	require "libfixposix/binary"
 rescue LoadError

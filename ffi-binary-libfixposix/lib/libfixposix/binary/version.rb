@@ -13,7 +13,7 @@ module LFP
 			"libfixposix.so"
 		end
 		PATH = if RUBY_PLATFORM == "java"
-			File.join(__dir__, "all", RbConfig.expand("$(target_cpu)-$(target_os)"), NAME)
+			File.join(__dir__, RbConfig.expand("$(target_cpu)-$(target_os)".dup), NAME)
 		else
 			File.join(__dir__, NAME)
 		end

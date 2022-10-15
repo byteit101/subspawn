@@ -1,6 +1,6 @@
 # frozen_string_literal: true
-require_relative '../libfixposix'
-require_relative './ffi'
+require 'libfixposix'
+require 'libfixposix/ffi'
 
 module LFP
 	VERSION = "#{LFP::INTERFACE_VERSION}.0"

@@ -1,5 +1,5 @@
 require_relative './fd_types'
-require_relative './graph_helpers'
+require_relative './graph_helper'
 require_relative './pipes'
 
 module SubSpawn::Internal

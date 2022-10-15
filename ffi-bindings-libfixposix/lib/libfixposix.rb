@@ -12,10 +12,10 @@ module LFP
 		end
 	end
 end
-require "libfixposix/ffi"
-require "libfixposix/version"
 begin
 	require "libfixposix/binary"
 rescue LoadError
 	# no binary installed, use system wide or ENV var
 end
+require "libfixposix/ffi"
+require "libfixposix/version"

@@ -117,7 +117,7 @@ class POSIX
 							# Launch!
 							ret = LFP.spawnp(pid, @path, argv_holder, envp_holder, sfa, sa)
 							if ret != 0
-								SystemCallError.new("Spawn Error: #{ret}", errno)
+								SystemCallError.new("Spawn Error: #{ret}", LFP.errno)
 							end
 							out_pid = pid.read_int
 						end

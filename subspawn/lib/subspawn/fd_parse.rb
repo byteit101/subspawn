@@ -50,7 +50,7 @@ module SubSpawn::Internal
 				FdSource::File.new d, src, ({read: IO::RDONLY, write: IO::WRONLY | IO::CREAT | IO::TRUNC}[guess_mode(d)])
 			when :close
 				FdSource::Close.new d
-			when :pty
+			when :pty, :tty
 				FdSource::PTY.new d
 			when :pipe
 				FdSource::Pipe.new d, guess_mode(d)

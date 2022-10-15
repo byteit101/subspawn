@@ -2,11 +2,12 @@ require 'pty'
 
 module SubSpawn::Internal
 	class FdSource
-		def initialize(dests)
+		def initialize(dests, all_dests=dests)
 			@dests = dests
+			@all_dests = all_dests
 			raise SpwnError, "Can't provide :tty in this source list" if dests.include? :tty
 		end
-		attr_reader :dests
+		attr_reader :dests, :all_dests
 
 		def destroys? value
 			@dests.include? value
@@ -116,24 +117,24 @@ module SubSpawn::Internal
 				raw_apply base, r
 				@dests.each {|dest| base.fd_close(w) } # if you want the other end, pass it in yourself
 
-				IoHolder::Pipe.new(w, r)
+				SubSpawn::IoHolder::Pipe.new(w, r)
 			end
 			#attr_reader :output
 		end
 		class PTY < Open
 			def initialize(dests)
 				tty, ntty = dests.partition{|x|x == :tty}
-				super(ntty)
+				super(ntty, dests)
 				@settty = !tty.empty?
 			end
 			def apply base
-				m,s = (@saved ||= PTY.open)
+				m,s = (@saved ||= ::PTY.open)
 				@dests.each {|dest| base.fd_close(m) } # if you want the master, pass it in yourself
 				raw_apply base, s
 				if @settty
 					base.tty = s
 				end
-				IoHolder::PTY.new(m,s)
+				SubSpawn::IoHolder::PTY.new(m,s)
 			end
 		end
 

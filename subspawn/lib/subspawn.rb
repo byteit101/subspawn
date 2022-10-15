@@ -71,8 +71,12 @@ module SubSpawn
 			when :chdir # P.s: :chdir
 				base.cwd = value
 			when :tty, :pty
-				base.tty = value
-				#base.sid!# TODO: yes? no?
+				if value == :tty || value == :pty
+					fds << [[key], value] # make a new pty this way
+				else
+					base.tty = value
+					#base.sid!# TODO: yes? no?
+				end
 			when :sid
 				base.sid! if value
 			when :uid, :userid, :user, :owner, :ownerid # TODO: which?
@@ -138,7 +142,7 @@ module SubSpawn
 		# configure them in order, saving new io descriptors
 		created_pipes = ordering.flat_map do |fd|
 			result = fd.apply(base)
-			fd.dests.map{|x| [x, result] }
+			fd.all_dests.map{|x| [x, result] }
 		end.to_h
 		# Spawn and return any new pipes
 		[base.spawn!, IoHolder.new(created_pipes)]
@@ -159,7 +163,7 @@ module SubSpawn
 
 	def self.pty_spawn(*args, &block)
 		# TODO: setsid?
-		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :tty, :pgroup => true)
+		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :pty, :pgroup => true)
 		tty = args[:tty]
 		list = [tty, tty, pid]
 		if block.nil?

@@ -1,3 +1,5 @@
+require 'pty'
+
 module SubSpawn::Internal
 	class FdSource
 		def initialize(dests)

@@ -158,7 +158,8 @@ module SubSpawn
 	end
 
 	def self.pty_spawn(*args, &block)
-		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :tty)
+		# TODO: setsid?
+		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :tty, :pgroup => true)
 		tty = args[:tty]
 		list = [tty, tty, pid]
 		if block.nil?

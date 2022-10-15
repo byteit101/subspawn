@@ -1,4 +1,5 @@
-require 'pty'
+# JRuby uses us as a PTY impl, so don't include PTY if it's already defined
+require 'pty' unless defined? ::PTY # avoid circular requires
 
 module SubSpawn::Internal
 	class FdSource
@@ -129,7 +130,7 @@ module SubSpawn::Internal
 			end
 			def apply base
 				m,s = (@saved ||= ::PTY.open)
-				@dests.each {|dest| base.fd_close(m) } # if you want the master, pass it in yourself
+				base.fd_close(m) # if you want the master, pass it in yourself
 				raw_apply base, s
 				if @settty
 					base.tty = s

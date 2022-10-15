@@ -59,7 +59,7 @@ module SubSpawn::Internal
 			when :pipe_w
 				FdSource::Pipe.new d, :read
 			else
-				if d.include? :tty and src.is_a? File
+				if d.include? :tty and src.is_a? File # TODO: is this redundant?
 					settty.call(src.path)
 					d.delete(:tty)
 				end

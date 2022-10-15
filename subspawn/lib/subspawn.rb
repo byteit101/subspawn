@@ -65,7 +65,7 @@ module SubSpawn
 			when Array # P.s
 				fds << [key,value]
 			# TODO:  ,:output, :input, :error, :stderr, :stdin, :stdout, :pty, :tty ?
-			when Integer, IO, :in,  :out, :err, :tty # P.s: in, out, err, IO, Integer
+			when Integer, IO, :in,  :out, :err # P.s: in, out, err, IO, Integer
 				fds << [[key], value]
 			# TODO: , :cwd
 			when :chdir # P.s: :chdir
@@ -163,7 +163,7 @@ module SubSpawn
 
 	def self.pty_spawn(*args, &block)
 		# TODO: setsid?
-		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :pty, :pgroup => true)
+		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :pty, :pgroup => 0, :sid => true)
 		tty = args[:tty]
 		list = [tty, tty, pid]
 		if block.nil?

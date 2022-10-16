@@ -181,7 +181,7 @@ RSpec.describe SubSpawn::POSIX do
 			expect(File.read(T).strip).to eq(our_pgid)
 
 			# new group
-			cmd = Px.new("sh", "-c",%q{read foo; sed < /proc/$foo/stat -n '$s/.*) [^ ]* [^ ]* \([^ ]*\).*/\1/p' > } + T)
+			cmd = Px.new("ruby", "-e",%q{foo = gets; data = File.read("/proc/self/stat").tap{|x|File.write("/tmp/out", x)}.match(/.*\) [^ ]* [^ ]* ([^ ]*).*/)[1];  } + %Q{ File.write("#{T}", data)})
 			cmd.fd(:in, r)
 			cmd.pgroup = 0 # pid
 			pid = cmd.spawn!
@@ -191,7 +191,6 @@ RSpec.describe SubSpawn::POSIX do
 
 			status = Process.waitpid2(pid)
 			expect(status).to eq [pid, 0]
-			p our_pgid
 			expect(File.read(T).strip).to eq(pid.to_s)	
 
 			r.close
@@ -373,7 +372,7 @@ RSpec.describe SubSpawn::POSIX do
 			expect(status.last.termsig).to eq 10
 
 			# check defaults
-			cmd = Px.new("sleep", "2")
+			cmd = Px.new("sleep", "1")
 			cmd.sigmask(:full)
 			pid = cmd.spawn!
 			expect(pid).to be_a(Integer)

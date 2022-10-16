@@ -49,13 +49,13 @@ module SubSpawn
 
 		# Signals 
 		type SignalName = String | Symbol | Integer
-		def signal_mask: (SubSpawn::POSIX::SigSet | :full | :empty | :current, ?add: SignalName | Array[SignalName], ?delete: SignalName | Array[SignalName]) -> self
+		def signal_mask: (SubSpawn::POSIX::SigSet | :full | :empty | :current | :default, ?add: SignalName | Array[SignalName], ?delete: SignalName | Array[SignalName], ?block: SignalName | Array[SignalName], ?allow: SignalName | Array[SignalName]) -> self
 		attr_writer signal_mask: SubSpawn::POSIX::SigSet
 		alias sigmask signal_mask
 		alias sigmask= signal_mask=
 
+		def signal_default: (SubSpawn::POSIX::SigSet | :full | :empty | :current | :default, ?add: SignalName | Array[SignalName], ?delete: SignalName | Array[SignalName], ?default: SignalName | Array[SignalName]) -> self
 		alias signal_default= signal_mask=
-		alias signal_default signal_mask
 
 		# Misc
 		type ResourceName = String | Symbol | Integer

@@ -93,7 +93,7 @@ class POSIX
 				# set up ownership and groups
 				sa.uid = @uid.to_i if @uid
 				sa.gid = @gid.to_i if @gid
-				sa.pgroup = @pid.to_i if @pid
+				sa.pgroup = @pgroup.to_i if @pgroup
 				sa.umask = @umask.to_i if @umask
 				
 				# Set up terminal control
@@ -194,7 +194,7 @@ class POSIX
 	# signal_default = SigSet.empty.add(:usr1).delete("USR2")
 	# signal_default(:full, exclude: [9])
 	def signal_default(sigmask = :default, add: [], delete: [], default: [])
-		sigmask = :empty if sigmask = :default
+		sigmask = :empty if sigmask == :default
 		@signal_default = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
 		@signal_default.add(add, default).delete(delete)
 		self

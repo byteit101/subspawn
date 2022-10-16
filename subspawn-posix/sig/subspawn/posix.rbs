@@ -1,0 +1,93 @@
+module SubSpawn
+	class SpawnError < RuntimeError
+	end
+	class POSIX
+		VERSION: String
+
+		StdIn: Integer
+		StdErr: Integer
+		StdOut: Integer
+		Std: Hash[(:in | :out | :err), Integer]
+
+		# owner attributes
+		attr_writer uid: Integer
+		attr_writer gid: Integer
+		def owner: (?uid: Integer, ?gid: Integer) -> self
+
+		# Environmental attributes
+		attr_writer cwd: String | File
+		def cwd: (String | File) -> self
+		alias pwd= cwd=
+		alias pwd cwd
+		alias chdir= cwd=
+		alias chdir cwd
+
+		def env_reset!: () -> self
+		attr_writer env: Hash
+		def env: (key: String, value: String) -> self
+		       
+		attr_writer umask: Integer
+		def umask: (Integer) -> self
+		         
+		# File descriptor mapping
+		type FD = IO | :in | :out | :err | Integer
+		def fd: (FD dest,FD source) -> self
+		def fd_open: (FD dest, String path, ?Integer flags, ?Integer create_file_mode) -> self
+		def fd_keep: (FD) -> self
+		def fd_close: (FD) -> self
+
+		# Head control
+		def sid!: () -> self
+		def pgroup: (Integer) -> self
+		attr_writer pgroup: Integer
+		attr_writer tty: String | File
+		def tty: (String | File) -> self
+		alias ctty= tty=
+		alias ctty tty
+
+		# Signals 
+		type SignalName = String | Symbol | Integer
+		def signal_mask: (SubSpawn::POSIX::SigSet | :full | :empty | :current, ?add: SignalName | Array[SignalName], ?delete: SignalName | Array[SignalName]) -> self
+		attr_writer signal_mask: SubSpawn::POSIX::SigSet
+		alias sigmask signal_mask
+		alias sigmask= signal_mask=
+
+		alias signal_default= signal_mask=
+		alias signal_default signal_mask
+
+		# Misc
+		type ResourceName = String | Symbol | Integer
+		def name: (String) -> self
+		attr_writer name: String
+
+		def rlimit: (ResourceName resource_type, Integer soft_limit, ?Integer hard_max) -> self
+		alias setrlimit rlimit
+
+		# Action items
+		def validate: () -> bool
+		def validate!: () -> TrueClass
+		def spawn!: () -> Integer
+		          
+		# Nested Types
+		class SigSet
+			# Builders
+			def self.empty: -> SigSet
+			def self.full: -> SigSet
+			def self.current: -> SigSet
+			def initialize: (?:current | :empty | :full base) -> nil
+
+			# Modifiers
+			def include: (*(SignalName | Array[SignalName]) signals) -> self
+			def exclude: (*(SignalName | Array[SignalName]) signals) -> self
+			alias - exclude
+			alias + include
+			alias add exclude
+			alias del include
+			alias delete include
+
+			# Output (library use only)
+			def to_ptr: [T] () {(FFI::MemoryPointer) -> T} -> T
+			             | () -> FFI::MemoryPointer
+		end
+	end
+end

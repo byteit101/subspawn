@@ -26,12 +26,12 @@ class POSIX
 		@rlimits = {}
 		@umask = nil
 	end
-	attr_writer :signal_mask, :signal_default, :uid, :gid, :cwd
+	attr_writer :uid, :gid, :cwd, :ctty
 	
 	StdIn = 0
 	StdOut= 1
 	StdErr = 2
-	Std = {in: StdIn, out: StdOut, err: StdErr}
+	Std = {in: StdIn, out: StdOut, err: StdErr}.freeze
 	
 	def validate!
 		@argv.map!(&:to_s)
@@ -132,6 +132,7 @@ class POSIX
 		out_pid
 	end
 	
+	# TODO: allow io on left?
 	def fd(number, io_or_fd)
 		num = number.is_a?(Symbol) ? Std[number] : number.to_i
 		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
@@ -161,6 +162,8 @@ class POSIX
 		@argv[0] = string.to_s
 		self
 	end
+	alias :name= :name
+
 	def env_reset!
 		@env = :default
 		self
@@ -202,7 +205,7 @@ class POSIX
 	end
 	alias :umask :umask=
 
-	def owner(uid: none, gid: none)
+	def owner(uid: none, gid: none) # TODO: broken
 		@uid = uid unless uid.equals? none
 		@gid = gid unless gid.equals? none
 		self
@@ -213,6 +216,8 @@ class POSIX
 	end
 	alias :cwd :pwd
 	alias :pwd= :cwd=
+	alias :chdir :pwd
+	alias :chdir= :cwd=
 	
 	def sid!
 		@sid = true
@@ -224,13 +229,12 @@ class POSIX
 	end
 	alias :pgroup= :pgroup
 	
-	def tty(path)
+	def ctty(path)
 		@ctty = path
 		self
 	end
-	alias :tty= :tty
-	alias :ctty= :tty
-	alias :ctty :tty
+	alias :tty= :ctty=
+	alias :tty :ctty
 	
 
 	def rlimit(key, cur, max=cur)
@@ -253,6 +257,7 @@ class POSIX
 	end
 	
 	
+	# TODO: keep which here?
 	def self.which(path)
 		if defined? JRUBY_VERSION # JRuby has better lookup
 			which_jruby path
@@ -261,7 +266,6 @@ class POSIX
 		end
 	end
 	private
-
 	def ensure_rlimit(key, value)
 		#if key.nil?
 		#	Process.getrlimit(key).last # if here, we are requesting max, as it was nil

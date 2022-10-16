@@ -46,7 +46,7 @@ class POSIX
 			fd_check(x.fd)
 			raise SpawnError, "Invalid FD open: Not a number: #{x.mode.inspect}" unless x.mode.is_a? Integer
 			raise SpawnError, "Invalid FD open: Not a flag: #{x.flags.inspect}" unless x.flags.is_a? Integer
-			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? path
+			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? x.path or Dir.exist?(File.dirname(x.path))
 		}
 		
 		raise SpawnError, "Invalid cwd path" unless @cwd.nil? or Dir.exist?(@cwd = ensure_file_string(@cwd))
@@ -70,7 +70,7 @@ class POSIX
 				
 				@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
 				@fd_opens.each {|opn|
-					sfa.addopen(opn.fd, opn.path, opn.flags, opn.mode)
+					sfa.addopen(fd_number(opn.fd), opn.path, opn.flags, opn.mode)
 				}
 				@fd_map.map{|k, v| [k, fd_number(v)] }.each do |dest, src|
 					sfa.adddup2(src, dest)
@@ -87,8 +87,8 @@ class POSIX
 				end
 				
 				# set up signals
-				sa.sigmask = @signal_mask.alloc_native if @signal_mask
-				sa.sigdefault = @signal_default.alloc_native if @signal_default
+				sa.sigmask = @signal_mask.to_ptr if @signal_mask
+				sa.sigdefault = @signal_default.to_ptr if @signal_default
 				
 				# set up ownership and groups
 				sa.uid = @uid.to_i if @uid
@@ -144,7 +144,7 @@ class POSIX
 		self
 	end
 
-	def fd_open(number, path, flags = 0, mode=0)
+	def fd_open(number, path, flags = 0, mode=0o666) # umask will remove bits
 		num = number.is_a?(Symbol) ? Std[number] : number.to_i
 		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
 		@fd_opens << OpenFD.new(number, path, mode, flags)
@@ -206,8 +206,8 @@ class POSIX
 	alias :umask :umask=
 
 	def owner(uid: none, gid: none) # TODO: broken
-		@uid = uid unless uid.equals? none
-		@gid = gid unless gid.equals? none
+		@uid = uid unless uid.equal? none
+		@gid = gid unless gid.equal? none
 		self
 	end
 	def pwd(path)
@@ -238,7 +238,7 @@ class POSIX
 	
 
 	def rlimit(key, cur, max=cur)
-		key = if key.is_a? Inteter
+		key = if key.is_a? Integer
 			key.to_i
 		else# TODO: is upcase ok?
 			Process.const_get("RLIMIT_#{key.to_s.upcase}")
@@ -266,6 +266,9 @@ class POSIX
 		end
 	end
 	private
+	def none
+		@@none ||= Object.new
+	end
 	def ensure_rlimit(key, value)
 		#if key.nil?
 		#	Process.getrlimit(key).last # if here, we are requesting max, as it was nil

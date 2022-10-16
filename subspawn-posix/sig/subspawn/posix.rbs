@@ -9,6 +9,8 @@ module SubSpawn
 		StdOut: Integer
 		Std: Hash[(:in | :out | :err), Integer]
 
+		def initialize: (String command, *String args, ?arg0: String) -> nil
+
 		# owner attributes
 		attr_writer uid: Integer
 		attr_writer gid: Integer

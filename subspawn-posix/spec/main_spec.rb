@@ -162,6 +162,8 @@ RSpec.describe SubSpawn::POSIX do
 	end
 	context "Terminal Control" do
 		require 'pty'
+
+		# https://unix.stackexchange.com/questions/132224/is-it-possible-to-get-process-group-id-from-proc
 		it "can set process group" do
 			r,w = IO.pipe
 			# old group
@@ -280,7 +282,7 @@ RSpec.describe SubSpawn::POSIX do
 
 	context "Advanced Attributes" do
 		it "can mask signals" do
-			# no masking
+			# no masking, trapped
 			r,w = IO.pipe
 			r2,w2 = IO.pipe
 			cmd = Px.new("ruby", "-e", "
@@ -312,47 +314,78 @@ RSpec.describe SubSpawn::POSIX do
 			expect(r2.read_nonblock(1024)).to eq "\nuser1\nuser2\nuser1\ndone\n"
 			[r,w,r2,w2].each(&:close)
 
-			# with masking. TODO: I think this may be pointless?
+			# no masking, no traipped.
 
-			r,w = IO.pipe
-			r2,w2 = IO.pipe
-			# cmd = Px.new("ruby", "-e", "
-			# 	Signal.trap('USR1'){ puts :user1 }
-			# 	Signal.trap('USR2'){ puts :user2 }
-			# 	puts :start
-			# 	STDOUT.flush
-			# 	puts gets
-			# 	STDOUT.flush
-			# 	exit
-			# 	")
-			cmd = Px.new("sh", "-c", "
-				trap 'echo user1' 10;
-				trap 'echo user2' 12;
-				echo start
-				sleep 1
-				read foo
-				echo \"$foo\"
-				exit
-				 	")
-			cmd.fd(:in, r)
-			cmd.fd(:out, w2)
-			cmd.sigmask(:empty, add: 10)
-			cmd.sid!
-			#cmd.fd(:err, w2)
+			cmd = Px.new("sleep", "2")
+			#cmd.sigmask(:empty, block: 10)
 			pid = cmd.spawn!
 			expect(pid).to be_a(Integer)
 			expect(pid).to be > 0
-			expect(r2.read(5)).to eq("start")
+			sleep 0.3
 			Process.kill("USR1", pid)
 			sleep 0.1
 			Process.kill("USR2", pid)
-			sleep 0.1
+			status = Process.waitpid2(pid)
+			expect(status.first).to eq pid
+			expect(status.last.termsig).to eq 10
+
+			# masking, no trapping.
+			cmd = Px.new("sleep", "2")
+			cmd.sigmask(:default, block: 10)
+			pid = cmd.spawn!
+			expect(pid).to be_a(Integer)
+			expect(pid).to be > 0
+			sleep 0.3
 			Process.kill("USR1", pid)
 			sleep 0.1
-			w.puts "done"
+			Process.kill("USR2", pid)
 			status = Process.waitpid2(pid)
-			expect(status).to eq [pid, 0]
-			expect(r2.read_nonblock(1024)).to eq "\nuser2\ndone\n"
+			expect(status.first).to eq pid
+			expect(status.last.termsig).to eq 12
+		end
+		it "has sane defaults for signals" do
+			# check defaults
+			cmd = Px.new("sleep", "2")
+			cmd.sigmask(:default)
+			pid = cmd.spawn!
+			expect(pid).to be_a(Integer)
+			expect(pid).to be > 0
+			sleep 0.3
+			Process.kill("USR1", pid)
+			sleep 0.1
+			Process.kill("USR2", pid)
+			status = Process.waitpid2(pid)
+			expect(status.first).to eq pid
+			expect(status.last.termsig).to eq 10
+
+			# check defaults
+			cmd = Px.new("sleep", "2")
+			cmd.sigmask(:empty)
+			pid = cmd.spawn!
+			expect(pid).to be_a(Integer)
+			expect(pid).to be > 0
+			sleep 0.3
+			Process.kill("USR1", pid)
+			sleep 0.1
+			Process.kill("USR2", pid)
+			status = Process.waitpid2(pid)
+			expect(status.first).to eq pid
+			expect(status.last.termsig).to eq 10
+
+			# check defaults
+			cmd = Px.new("sleep", "2")
+			cmd.sigmask(:full)
+			pid = cmd.spawn!
+			expect(pid).to be_a(Integer)
+			expect(pid).to be > 0
+			sleep 0.3
+			Process.kill("USR1", pid)
+			sleep 0.1
+			Process.kill("USR2", pid)
+			status = Process.waitpid2(pid)
+			expect(status.first).to eq pid
+			expect(status.last).to eq 0
+
 		end
 
 		it "can change rlimit" do
@@ -370,11 +403,17 @@ RSpec.describe SubSpawn::POSIX do
 			expect(File.read(T).strip.to_i).to be > 1024
 		end
 		it "can use saved rlimit" do
-			expect(do_shell_spawn(%Q{ulimit -n -H > #{T}}){|x|x.rlimit(:nofile, 776,Process::RLIM_SAVED_MAX)}).to eq 0
+			expect(do_shell_spawn(%Q{ulimit -n -H > #{T}}){|x|x.rlimit(:nofile, 776,nil)}).to eq 0
 			expect(File.read(T).strip.to_i).to be > 1024
 
 			expect(do_shell_spawn(%Q{ulimit -n -H > #{T}}){|x|x.rlimit(:nofile, 776)}).to eq 0
 			expect(File.read(T).strip.to_i).to be > 1024
+
+			expect(do_shell_spawn(%Q{ulimit -n > #{T}})).to eq 0
+			current = File.read(T).strip.to_i
+
+			expect(do_shell_spawn(%Q{ulimit -n > #{T}}){|x|x.rlimit(:nofile, nil, 2048)}).to eq 0
+			expect(File.read(T).strip.to_i).to eq current
 		end
 	end
 end

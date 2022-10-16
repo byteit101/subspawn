@@ -180,9 +180,10 @@ class POSIX
 	# usage:
 	# signal_mask = SigSet.empty.add(:usr1).delete("USR2")
 	# signal_mask(:full, exclude: [9])
-	def signal_mask(sigmask = nil, add: [], delete: [])
+	def signal_mask(sigmask = :default, add: [], delete: [], block: [], allow: [])
+		sigmask = :empty if sigmask == :default
 		@signal_mask = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
-		@signal_mask.add(add).delete(delete)
+		@signal_mask.add(add, allow).delete(delete, block)
 		self
 	end
 	alias :signal_mask= :signal_mask
@@ -192,9 +193,10 @@ class POSIX
 	# usage:
 	# signal_default = SigSet.empty.add(:usr1).delete("USR2")
 	# signal_default(:full, exclude: [9])
-	def signal_default(sigmask = nil, add: [], delete: [])
+	def signal_default(sigmask = :default, add: [], delete: [], default: [])
+		sigmask = :empty if sigmask = :default
 		@signal_default = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
-		@signal_default.add(add).delete(delete)
+		@signal_default.add(add, default).delete(delete)
 		self
 	end
 	alias :signal_default= :signal_default
@@ -237,16 +239,15 @@ class POSIX
 	alias :tty :ctty
 	
 
-	def rlimit(key, cur, max=cur)
+	def rlimit(key, cur, max=nil)
 		key = if key.is_a? Integer
 			key.to_i
 		else# TODO: is upcase ok?
 			Process.const_get("RLIMIT_#{key.to_s.upcase}")
 			#raise SpawnError, "Invaild rlimit key: #{key}"
 		end
-		raise SpawnError, "rlimit value was nil" if cur.nil?
-		cur = ensure_rlimit(key, cur)
-		max = ensure_rlimit(key, max || cur)
+		cur = ensure_rlimit(key, cur, 0)
+		max = ensure_rlimit(key, max, 1)
 		@rlimits[key] = [cur, max]
 		self
 	end
@@ -269,10 +270,10 @@ class POSIX
 	def none
 		@@none ||= Object.new
 	end
-	def ensure_rlimit(key, value)
-		#if key.nil?
-		#	Process.getrlimit(key).last # if here, we are requesting max, as it was nil
-		#end
+	def ensure_rlimit(key, value, index)
+		if value.nil?
+			return Process.getrlimit(key)[index] # unspecified, load saved
+		end
 		return value.to_i if value.is_a? Integer
 		Process.const_get("RLIMIT_#{value.to_s.upcase}") # TODO: is upcase ok?
 	end

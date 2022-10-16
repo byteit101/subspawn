@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email = ["simonpatp@gmail.com"]
 
   spec.summary = "SubSpawn Mid-level API for POSIX systems"
-  spec.description = "A SubSpawn API to wrap libfixposix at a mid-level"
+  spec.description = "A SubSpawn subproject to wrap libfixposix as a mid level API"
   final_github = "https://github.com/jruby/subspawn"
   spec.homepage = final_github
   spec.required_ruby_version = ">= 2.6.0"

@@ -1,3 +1,5 @@
 --format documentation
 --color
+-I ../ffi-binary-libfixposix/lib
+-I ../ffi-bindings-libfixposix/lib
 --require spec_helper

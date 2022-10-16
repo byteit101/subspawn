@@ -38,9 +38,11 @@ class SubSpawn::POSIX::SigSet
 		if @ptr.nil?
 			# sigset_t is largest on linux, at 128 bytes, so always allocate that much
 			if block_given?
-				FFI::MemoryPointer.new(:byte, 128) {|ptr| alloc_internal(ptr); block.call(ptr)}
+				ret = nil
+				FFI::MemoryPointer.new(:uint8, 128) {|ptr| alloc_internal(ptr); ret = block.call(ptr)}
+				ret
 			else
-				FFI::MemoryPointer.new(:byte, 128).tap {|ptr| @ptr = ptr; alloc_internal(ptr)}
+				FFI::MemoryPointer.new(:uint8, 128).tap {|ptr| @ptr = ptr; alloc_internal(ptr)}
 			end
 		else
 			if block_given?
@@ -65,7 +67,7 @@ class SubSpawn::POSIX::SigSet
 	def alloc_internal ptr
 		sig = SubSpawn::POSIX::Internal::SignalFn
 		case @base
-		when :full then sig.fullset(ptr)
+		when :full then sig.fillset(ptr)
 		when :empty then sig.emptyset(ptr)
 		when :current
 			sig.emptyset(ptr)

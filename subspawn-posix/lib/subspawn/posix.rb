@@ -297,6 +297,12 @@ class POSIX
 		# TODO: implement that
 		["sh", "-c", string.to_str]
 	end
+
+	COMPLETE_VERSION = {
+		subspawn_posix: SubSpawn::POSIX::VERSION,
+		libfixposix: LFP::COMPLETE_VERSION,
+	}
+
 	private
 	def none
 		@@none ||= Object.new

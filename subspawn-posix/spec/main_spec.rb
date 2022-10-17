@@ -28,6 +28,14 @@ RSpec.describe SubSpawn::POSIX do
 		return status.last.exitstatus if status.last.is_a? Process::Status
 		status.last
 	end
+	it "has all version numbers" do
+		expect(SubSpawn::POSIX::VERSION).not_to be nil
+		expect(LFP::VERSION).not_to be nil
+		expect(LFP::INTERFACE_VERSION).not_to be nil
+		expect(LFP::Binary::API_VERSION).not_to be nil
+		expect(LFP::Binary::GEM_VERSION).not_to be nil
+		expect(LFP::Binary::SO_VERSION).not_to be nil
+	end
 
 	context "Basic Spawn" do
 		it "launches" do

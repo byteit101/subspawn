@@ -7,6 +7,24 @@ RSpec.describe SubSpawn do
 		expect(SubSpawn::VERSION).not_to be nil
 		expect(SubSpawn::Platform::VERSION).not_to be nil
 		expect(SubSpawn::Platform::VERSION).to eq SubSpawn::VERSION
+		expect(SubSpawn::COMPLETE_VERSION).not_to be nil
+		# TODO: this is fragile
+		expect(SubSpawn::COMPLETE_VERSION).to eq({
+			:platform => {
+				:libfixposix=>{
+					:binary=>{
+						:gem=>"0.5.0.0-dev",
+						:interface=>"0.5.0",
+						:library=>"0.5.0"
+					},
+					:gem=>"0.5.0-dev.0",
+					:interface=>"0.5.0-dev",
+					:library=>"0.5.0"
+				},
+				:subspawn_posix=>"0.1.0-dev"
+			},
+			:subspawn => "0.1.0-dev"
+			})
 	end
 	def nexpect thing
 		Dummy.new
@@ -37,6 +55,7 @@ RSpec.describe SubSpawn do
 		end
 		
 		it "makes shells" do
+			# a bit fragile
 			expect(d).to receive(:new).with("ls c", arg0: "ls c").and_return(o)
 			expect(o).to receive(:spawn!)
 			expect(o).to receive(:env=)

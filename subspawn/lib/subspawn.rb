@@ -207,4 +207,8 @@ module SubSpawn
 		end
 	end
 
+	COMPLETE_VERSION = {
+		subspawn: SubSpawn::VERSION,
+		platform: SubSpawn::Platform::COMPLETE_VERSION,
+	}
 end

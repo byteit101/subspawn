@@ -19,3 +19,23 @@ rescue LoadError
 end
 require "libfixposix/ffi"
 require "libfixposix/version"
+
+# Extract bound version
+module LFP
+	Buildinfo.new.tap {|ptr|
+		LFP.buildinfo(ptr)
+		SO_VERSION = [ptr[:release]].pack("L").unpack("ccc").reverse.join(".")
+	}
+	COMPLETE_VERSION = {
+		gem: LFP::VERSION,
+		interface: LFP::INTERFACE_VERSION,
+		library: LFP::SO_VERSION,
+	}
+	if defined? LFP::Binary
+		COMPLETE_VERSION[:binary] = {
+			gem: LFP::Binary::GEM_VERSION,
+			interface: LFP::Binary::API_VERSION,
+			library: LFP::Binary::SO_VERSION,
+		}
+	end
+end

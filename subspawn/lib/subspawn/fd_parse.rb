@@ -5,6 +5,9 @@ require_relative './pipes'
 module SubSpawn::Internal
 	# argument value to int (or :tty)
 	def self.parse_fd(fd, allow_pty=false)
+		# fd = if fd.respond_to? :to_path
+		# fd = if fd.respond_to? :to_file
+		# fd = if fd.respond_to? :to_file
 		case fd
 		when Integer then fd
 		when IO then fd.fileno
@@ -17,6 +20,21 @@ module SubSpawn::Internal
 			else
 				raise ArgumentError, "Unknown FD type: #{fd.inspect}"
 			end
+		end
+	end
+
+	# mode conversion
+	def self.guess_mode(d)
+		read = d.include? 0 # stdin
+		write = (d.include? 1 or d.include? 2) # stdout
+		if read && write
+			raise ArgumentError, "Invalid FD source specification: ambiguious mode (r & w)"
+		elsif read
+			:read
+		elsif write
+			:write
+		else
+			raise ArgumentError, "Invalid FD source specification: ambiguious mode (stdio missing)"
 		end
 	end
 
@@ -41,7 +59,7 @@ module SubSpawn::Internal
 					raise ArgumentError, "Invalid :child FD source specification" unless child_lookup[newfd]
 					child_lookup[newfd].tap{|child|
 						# add our destinations to the source's redirection
-						d.each { child.dests << d }
+						d.each { |di| child.dests << di }
 					}
 				else
 					raise ArgumentError, "Invalid FD source specification"
@@ -112,5 +130,19 @@ module SubSpawn::Internal
 		elts = graph.ordered_kahn.reverse # execute in the opposite order of dependencies
 		#puts graph.to_dot
 		elts
+	end
+
+	# I'd love to use this method, but it doesn't accept env
+	# def self.which_jruby(cmd)
+	# 	require 'jruby'
+	# 	org.jruby.util.ShellLauncher.findPathExecutable(JRuby.runtime, cmd)&.absolute_path
+	# end
+
+	def self.which(cmd, env)
+		return nil if cmd.nil? or cmd.to_str == ""
+		SubSpawn::Platform. 
+			expand_which(cmd, env).
+			lazy.
+			find {|x|!File.directory? x and File.executable? x}
 	end
 end

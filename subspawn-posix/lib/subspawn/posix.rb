@@ -10,9 +10,10 @@ class POSIX
 	OpenFD = Struct.new(:fd, :path, :mode, :flags)
 	
 	def initialize(command, *args, arg0: command)
-		@path = self.class.which(command)
-		raise SpawnError, "Command not found: #{command}" unless @path
-		@argv = [arg0, *args.map(&:to_s)]
+		@path = command
+		#raise SpawnError, "Command not found: #{command}" unless @path
+		# TODO: we use envp, so can't check this now
+		@argv = [arg0, *args.map(&:to_str)]
 		@fd_map = {}
 		@fd_keeps = []
 		@fd_closes = []
@@ -34,7 +35,7 @@ class POSIX
 	Std = {in: StdIn, out: StdOut, err: StdErr}.freeze
 	
 	def validate!
-		@argv.map!(&:to_s)
+		@argv.map!(&:to_str) # By spec
 		raise SpawnError, "Invalid argv" unless @argv.length > 0
 		@fd_map = @fd_map.map do |number, source|
 			raise SpawnError, "Invalid FD map: Not a number: #{number.inspect}" unless number.is_a? Integer
@@ -105,7 +106,10 @@ class POSIX
 				
 				# allocate output (pid)
 				FFI::MemoryPointer.new(:int, 1) do |pid|
-					argv_str = @argv.map{|a|FFI::MemoryPointer.from_string a} + [nil] # null end of argv
+					argv_str = @argv.map{|a|
+						raise ArgumentError, "Nulls not allowed in command: #{a.inspect}" if a.include? "\0"
+						FFI::MemoryPointer.from_string a
+					} + [nil] # null end of argv
 					FFI::MemoryPointer.new(:pointer, argv_str.length) do |argv_holder|
 					
 						# ARGV
@@ -117,7 +121,7 @@ class POSIX
 							# Launch!
 							ret = LFP.spawnp(pid, @path, argv_holder, envp_holder, sfa, sa)
 							if ret != 0
-								SystemCallError.new("Spawn Error: #{ret}", LFP.errno)
+								raise SystemCallError.new("Spawn Error: #{ret}", LFP.errno)
 							end
 							out_pid = pid.read_int
 						end
@@ -164,6 +168,17 @@ class POSIX
 	end
 	alias :name= :name
 
+	def args(args)
+		@argv = [@argv[0], *args.map(&:to_str)]
+		self
+	end
+	alias :args= :args
+	def command(cmd)
+		@path = cmd
+		self
+	end
+	alias :command= :command
+
 	def env_reset!
 		@env = :default
 		self
@@ -207,7 +222,7 @@ class POSIX
 	end
 	alias :umask :umask=
 
-	def owner(uid: none, gid: none) # TODO: broken
+	def owner(uid: none, gid: none)
 		@uid = uid unless uid.equal? none
 		@gid = gid unless gid.equal? none
 		self
@@ -226,7 +241,8 @@ class POSIX
 		self
 	end
 	def pgroup(pid)
-		@pgroup = pid
+		raise ArgumentError, "Invalid pgroup: #{pid}" if pid < 0 or !pid.is_a?(Integer)
+		@pgroup = pid.to_i
 		self
 	end
 	alias :pgroup= :pgroup
@@ -242,9 +258,8 @@ class POSIX
 	def rlimit(key, cur, max=nil)
 		key = if key.is_a? Integer
 			key.to_i
-		else# TODO: is upcase ok?
+		else # TODO: these const lookup should have better error handling
 			Process.const_get("RLIMIT_#{key.to_s.upcase}")
-			#raise SpawnError, "Invaild rlimit key: #{key}"
 		end
 		cur = ensure_rlimit(key, cur, 0)
 		max = ensure_rlimit(key, max, 1)
@@ -258,13 +273,29 @@ class POSIX
 	end
 	
 	
-	# TODO: keep which here?
-	def self.which(path)
-		if defined? JRUBY_VERSION # JRuby has better lookup
-			which_jruby path
+
+	# generator for candidates for an executable name
+	# usage:
+	# SubSpawn::POSIX.each_which("ls", ENV) {|path| ...}
+	# SubSpawn::POSIX.each_which("ls", ENV).to_a
+	def self.expand_which(name, env=ENV)
+		return self.to_enum(:expand_which, name, env) unless block_given?
+		# only allow relative paths if they traverse, and if they traverse, only allow relative paths
+		if name.include? "/"
+			yield File.absolute_path(name)
 		else
-			which_mri path
+			env['PATH'].split(File::PATH_SEPARATOR).each do |path|
+				yield File.join(path, name)
+			end
 		end
+	end
+
+	def self.shell_command(string)
+		# MRI scans for "basic" commands and if so, just un-expands the shell
+		# we could do that too, and there are 2 tests about that in rubyspec
+		# but we shall ignore them for now
+		# TODO: implement that
+		["sh", "-c", string.to_str]
 	end
 	private
 	def none
@@ -275,14 +306,22 @@ class POSIX
 			return Process.getrlimit(key)[index] # unspecified, load saved
 		end
 		return value.to_i if value.is_a? Integer
-		Process.const_get("RLIMIT_#{value.to_s.upcase}") # TODO: is upcase ok?
+		Process.const_get("RLIMIT_#{value.to_s.upcase}")
 	end
 
 	def make_envp
 		if @env == :default
 			yield LFP.get_environ
 		else
-			strings = @env.map{|k,v|FFI::MemoryPointer.from_string "#{k}=#{v}"} + [nil] # null end of argp
+			strings = @env.select{|k, v|
+				!k.nil? and !v.nil?
+			}.map{|k,v|
+				k = k.to_str
+				str = "#{k}=#{v.to_str}"  # rubyspec says to convert to_str
+				raise ArgumentError, "Nulls not allowed in environment variable: #{str.inspect}" if str.include? "\0" # By Spec
+				raise ArgumentError, "Variable key cannot include '=': #{str.inspect}" if k.include? "=" # By Spec
+				FFI::MemoryPointer.from_string str
+			} + [nil] # null end of argp
 			FFI::MemoryPointer.new(:pointer, strings.length) do |argp_holder|
 				argp_holder.write_array_of_pointer strings
 				yield argp_holder
@@ -321,22 +360,7 @@ class POSIX
 			raise SpawnError, "Invalid FD map: Not a io or number: #{source.inspect}"
 		end
 	end
-	def self.which_jruby(cmd)
-		require 'jruby'
-		org.jruby.util.ShellLauncher.findPathExecutable(JRuby.runtime, cmd)&.absolute_path
-	end
-	# TODO: test absoloute and relative
-	# https://stackoverflow.com/questions/2108727/which-in-ruby-checking-if-program-exists-in-path-from-ruby
-	def self.which_mri(cmd)
-	  exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
-	  ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
-		exts.each do |ext|
-		  exe = File.join(path, "#{cmd}#{ext}")
-		  return exe if File.executable?(exe) && !File.directory?(exe)
-		end
-	  end
-	  nil
-	end
+
 end
 end
 

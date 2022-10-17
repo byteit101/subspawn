@@ -61,6 +61,10 @@ module SubSpawn
 		type ResourceName = String | Symbol | Integer
 		def name: (String) -> self
 		attr_writer name: String
+		def args: (Array[String]) -> self
+		attr_writer args: Array[String]
+		def command: (String) -> self
+		attr_writer command: String
 
 		def rlimit: (ResourceName resource_type, Integer soft_limit, ?Integer hard_max) -> self
 		alias setrlimit rlimit
@@ -70,6 +74,12 @@ module SubSpawn
 		def validate!: () -> TrueClass
 		def spawn!: () -> Integer
 		          
+		# class interface methods
+		def self.expand_which: (String, ?Hash[String, String]) -> Enumerable[String]
+		                     | [T] (String, ?Hash[String, String]) { (String) -> T} -> T
+
+		def self.shell_command: (String) -> Array[String]
+
 		# Nested Types
 		class SigSet
 			# Builders

@@ -1,6 +1,3 @@
-# JRuby uses us as a PTY impl, so don't include PTY if it's already defined
-require 'pty' unless defined? ::PTY # avoid circular requires
-
 module SubSpawn::Internal
 	class FdSource
 		def initialize(dests, all_dests=dests)
@@ -90,18 +87,30 @@ module SubSpawn::Internal
 		end
 
 		class File < Open
-			def initialize(dests, file, mode, perm)
+			def initialize(dests, file, mode = ::File::RDONLY, perm = 0o666)
 				super(dests)
 				@value = file
 				@mode = mode || ::File::RDONLY
-				@perm = perm || 0o644
+				if @mode.respond_to? :to_str
+					@mode = case @mode.to_str
+					when "w" then IO::WRONLY | IO::CREAT | IO::TRUNC
+					when "r" then IO::RDONLY
+					when "rb" then IO::RDONLY | IO::BINARY
+					when "wb" then IO::WRONLY | IO::BINARY | IO::CREAT | IO::TRUNC
+					when "r+", "w+" then IO::RDWR | IO::CREAT 
+						# TODO: all!
+					else
+						raise ArgumentError "Unknown File mode"
+					end
+				end
+				@perm = perm || 0o666
 			end
 			def to_dbg
 				[@dests, :file, @value, @mode, @perm]
 			end
 			def apply base
 				first, *rest = @dests
-				base.fd_open(first, @value, @mode || IO::RDONLY, @flags || 0)
+				base.fd_open(first, @value, @mode, @perm)
 				rest.each {|dest| base.fd(dest, first) }
 				nil
 			end
@@ -124,6 +133,9 @@ module SubSpawn::Internal
 		end
 		class PTY < Open
 			def initialize(dests)
+				# JRuby uses us as a PTY impl, so don't include PTY if it's already defined
+				require 'pty' unless defined? ::PTY # avoid circular requires
+
 				tty, ntty = dests.partition{|x|x == :tty}
 				super(ntty, dests)
 				@settty = !tty.empty?

@@ -59,6 +59,22 @@ RSpec.describe SubSpawn::Internal do
 			[[1], 0],
 		]
 	end
+	# yes, this is kinda dumb, but for now it's a lazy way to clear the close-on-exec flag
+	# we could filter this out
+	it "self-loops are copied" do
+		expect(SubSpawn::Internal.graph_order([
+			G::Basic.new([1],1)
+		]).map(&:to_dbg)).to eq [
+			[[3], 1],
+			[[1], 3],
+			[:close, [3]],
+		]
+	end
+end
+context "usage fds" do
+	let(:o) { instance_double(SubSpawn::POSIX)}
+	let(:d) { class_double("SubSpawn::Platform").as_stubbed_const() }
+
 end
 	 #TODO: add double and triple circle, plus zig-zag and corona-loop
 	# TODO: tset child redirects

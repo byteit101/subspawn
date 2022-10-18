@@ -22,5 +22,9 @@ module Process
 		def spawn(*args)
 			SubSpawn.spawn_compat(*args)
 		end
+
+		def subspawn(args, opt={})
+			SubSpawn.spawn(args, opt)
+		end
 	end
 end

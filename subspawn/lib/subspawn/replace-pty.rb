@@ -1,9 +1,9 @@
 require 'subspawn'
 
-overwrite = defined? PTY
+$_ss_overwrite = defined? PTY
 
 module PTY
-	unless overwrite
+	unless $_ss_overwrite
 		class ChildExited < RuntimeError
 			def initialize(status)
 				@status = status
@@ -12,13 +12,16 @@ module PTY
 		end
 	end
 	class << self
-		if overwrite
+		if $_ss_overwrite
 			alias :builtin_spawn :spawn
 			alias :builtin_getpty :getpty
 		end
 
 		def spawn(*args, &block)
-			SubSpawn.pty_spawn(*args, &block)
+			SubSpawn.pty_spawn_compat(*args, &block)
+		end
+		def subspawn(command, opts={}, &block)
+			SubSpawn.pty_spawn(command, opts, &block)
 		end
 		alias :getpty :spawn
 
@@ -33,3 +36,5 @@ module PTY
 		end
 	end
 end
+
+$_ss_overwrite = nil

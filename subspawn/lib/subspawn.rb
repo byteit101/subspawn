@@ -55,6 +55,7 @@ module SubSpawn
 		end
 		SubSpawn.__spawn_internal(command, opt, copt).first
 	end
+	# TODO: accept block mode?
 	def self.spawn(command, opt={})
 		__spawn_internal(command, opt, {})
 	end
@@ -195,13 +196,16 @@ module SubSpawn
 		[base.spawn!, IoHolder.new(created_pipes)]
 	end
 
-	def self.pty_spawn(*args, &block)
+	def self.pty_spawn_compat(*args, &block)
+		pty_spawn(args, &block)
+	end
+	def self.pty_spawn(args, opts={}, &block)
 		# TODO: setsid?
 		# TODO: MRI tries to pull the shell out of the ENV var, but that seems wrong
-		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :pty, :sid => true)
+		pid, args = SubSpawn.spawn(args, {[:in, :out, :err, :tty] => :pty, :sid => true}.merge(opts))
 		tty = args[:tty]
 		list = [tty, tty, pid]
-		return list if block_given?
+		return list unless block_given?
 
 		begin
 			return block.call(*list)

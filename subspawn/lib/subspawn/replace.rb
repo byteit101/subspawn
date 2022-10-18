@@ -25,16 +25,36 @@ module Process
 	end
 end
 
-require 'pty'
+overwrite = defined? PTY
 
 module PTY
+	unless overwrite
+		class ChildExited < RuntimeError
+			def initialize(status)
+				@status = status
+			end
+			attr_reader :status
+		end
+	end
 	class << self
-		alias :builtin_spawn :spawn
-		alias :builtin_getpty :getpty
+		if overwrite
+			alias :builtin_spawn :spawn
+			alias :builtin_getpty :getpty
+		end
 
 		def spawn(*args, &block)
 			SubSpawn.pty_spawn(*args, &block)
 		end
 		alias :getpty :spawn
+
+		def open(&blk)
+			SubSpawn::Platform::PtyHelper.open(&blk)
+		end
+
+		def check(pid, do_raise=false)
+			return if Process.waitpid(pid, Process::WNOHANG | Process::WUNTRACED).nil?
+			return $? unless do_raise
+			raise ::PTY::ChildExited.new($?)
+		end
 	end
 end

@@ -2,6 +2,7 @@ require 'libfixposix'
 require 'subspawn/posix/version'
 require 'subspawn/posix/ffi_helper'
 require 'subspawn/posix/signals'
+require 'subspawn/posix/pty'
 module SubSpawn
 class SpawnError < RuntimeError
 end

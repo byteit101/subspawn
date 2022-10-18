@@ -133,15 +133,13 @@ module SubSpawn::Internal
 		end
 		class PTY < Open
 			def initialize(dests)
-				# JRuby uses us as a PTY impl, so don't include PTY if it's already defined
-				require 'pty' unless defined? ::PTY # avoid circular requires
-
 				tty, ntty = dests.partition{|x|x == :tty}
 				super(ntty, dests)
 				@settty = !tty.empty?
 			end
 			def apply base
-				m,s = (@saved ||= ::PTY.open)
+				# MRI doesn't do a chmod for PTY.spawn. Weird, but lets just copy that here
+				m,s = (@saved ||= SubSpawn::Platform::PtyHelper.open_internal)
 				base.fd_close(m) # if you want the master, pass it in yourself
 				raw_apply base, s
 				if @settty

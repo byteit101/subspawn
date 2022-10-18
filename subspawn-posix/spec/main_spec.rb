@@ -68,7 +68,7 @@ RSpec.describe SubSpawn::POSIX do
 
 	context "Owner Attributes (non-root, run as sudo to validate)", :if => Process.uid != 0 do
 		it "fails to change owners (run this suite as root to validate)" do
-			expect(do_shell_spawn(%Q{whoami > #{T}}){|x|x.owner(uid:0,gid:0)}).to eq 255
+			expect{do_shell_spawn(%Q{whoami > #{T}}){|x|x.owner(uid:0,gid:0)}}.to raise_error(SystemCallError)
 			expect(file).not_to exist
 		end
 	end
@@ -169,7 +169,6 @@ RSpec.describe SubSpawn::POSIX do
 		end
 	end
 	context "Terminal Control" do
-		require 'pty'
 
 		# https://unix.stackexchange.com/questions/132224/is-it-possible-to-get-process-group-id-from-proc
 		it "can set process group" do
@@ -238,8 +237,7 @@ RSpec.describe SubSpawn::POSIX do
 		end
 
 		it "can set tty" do
-			require 'pty'
-			m, s = PTY.open
+			m, s = SubSpawn::POSIX::PtyHelper.open
 			r,w = IO.pipe
 			# direct output
 			expect(do_shell_spawn(%Q{echo -n "maybe" > /dev/tty }){|x|x.tty = s.path;}).to eq 0
@@ -270,9 +268,8 @@ RSpec.describe SubSpawn::POSIX do
 		end
 
 		it "can use tty" do
-			require 'pty'
 			require 'io/console'
-			m, s = PTY.open
+			m, s = SubSpawn::POSIX::PtyHelper.open
 			m.winsize = [20,20]
 			m << "q" # amusingly, we don't need to set stdin for this to work. Thanks less!
 

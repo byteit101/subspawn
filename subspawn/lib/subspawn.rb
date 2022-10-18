@@ -197,13 +197,20 @@ module SubSpawn
 
 	def self.pty_spawn(*args, &block)
 		# TODO: setsid?
-		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :pty, :pgroup => 0, :sid => true)
+		# TODO: MRI tries to pull the shell out of the ENV var, but that seems wrong
+		pid, args = SubSpawn.spawn(args, [:in, :out, :err, :tty] => :pty, :sid => true)
 		tty = args[:tty]
 		list = [tty, tty, pid]
-		if block.nil?
-			return list
-		else
-			block.call(*list)
+		return list if block_given?
+
+		begin
+			return block.call(*list)
+		ensure
+			tty.close unless tty.closed?
+			# MRI waits this way to ensure the process is reaped
+			if Process.waitpid(pid, Process::WNOHANG)
+				Process.detach(pid)
+			end
 		end
 	end
 

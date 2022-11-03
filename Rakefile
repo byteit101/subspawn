@@ -70,7 +70,7 @@ task "clean" do
 end
 
 desc "CI test"
-task "ci:test" => %w{clean generate:ffi build} do
+task "ci-test" => %w{clean generate:ffi build} do
 	cd "subspawn-posix" do
 		sh 'rspec'
 	end
@@ -81,7 +81,7 @@ end
 
 
 desc "CI actions"
-task "ci:build" => %w{clean generate:ffi build} do
+task "ci-run" => %w{clean generate:ffi build} do
 	rm_rf "ci-output"
 
 	cd "ffi-binary-libfixposix" do
@@ -89,7 +89,7 @@ task "ci:build" => %w{clean generate:ffi build} do
 		if RbConfig::CONFIG["target_os"].include? "darwin"
 			# macs only build mac stuff
 			%w{x86_64 arm64}.each do |cpu|
-				target = "cpu-darwin"
+				target = "#{cpu}-darwin"
 				sh "rake clobber binary[#{target}] target[#{target}]"
 				destdir = "../ci-output/lib/#{target}/"
 				mkdir_p destdir
@@ -126,7 +126,7 @@ end
 
 
 desc "CI actions"
-task "ci:java" do
+task "ci-java" do
 	cd "ffi-binary-libfixposix" do
 		sh "rake clobber"
 		Dir["../ci-output/lib/*"].each do |path|
@@ -134,6 +134,7 @@ task "ci:java" do
 		end
 		
 		sh "rake target[java]"
+		mkdir_p "../ci-output/pkg/"
 		cp Dir["../ffi-binary-libfixposix/pkg/*java*.gem"], "../ci-output/pkg/"
 		Dir["../ci-output/lib/*"].each do |host|
 			rm_rf "lib/libfixposix/binary/#{File.basename host}"

@@ -276,6 +276,7 @@ RSpec.describe SubSpawn::POSIX do
 			# TODO: setsid? Unsure if necessary
 			expect(do_shell_spawn(%Q{less /proc/$$/stat}){|x|x.tty = s.path; x.fd(:out, s)}).to eq 0
 			sleep 0.1
+			p m.read_nonblock(10)
 			expect(m.read_nonblock(3)).to eq "q\e[" # less should think this is escape time
 
 			# TODO: failure = hang (Not great)

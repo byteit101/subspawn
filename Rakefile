@@ -134,6 +134,7 @@ task "ci-java" do
 		end
 		
 		sh "rake target[java]"
+		mkdir_p "../ci-output/pkg/"
 		cp Dir["../ffi-binary-libfixposix/pkg/*java*.gem"], "../ci-output/pkg/"
 		Dir["../ci-output/lib/*"].each do |host|
 			rm_rf "lib/libfixposix/binary/#{File.basename host}"

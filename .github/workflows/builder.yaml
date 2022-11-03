@@ -2,11 +2,11 @@ name: Build Artifacts
 
 on:
   push:
-    branches: [ main, ci-test ]
+    branches: [ master, ci-test ]
   workflow_dispatch:
 
 jobs:
-  build-artifacts:
+  build-core:
     strategy:
       matrix:
         # TODO: probablu use older ones so that it runs on older ones
@@ -23,14 +23,13 @@ jobs:
           ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
           bundler-cache: true
 
-
       - name: Install autoconf and automake for macOS
         if: matrix.os == 'macos-latest'
-        run: brew install autoconf automake libtool
+        run: brew install autoconf automake libtool pkgconfig
 
-      - name: Install multilib for Ubuntu
+      - name: Pull and set up dockcross
         if: matrix.os == 'ubuntu-latest'
-        run: sudo apt install -y gcc-multilib
+        run: cd binary-builders && ./setup.sh
 
       - name: Install dependencies
         run: bundle install
@@ -50,4 +49,59 @@ jobs:
         with:
           name: all-gems
           path: ci-output/pkg/
-          if-no-files-found: error 
+          if-no-files-found: error
+
+  build-fat-java:
+    needs: build-core
+    runs-on:  ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.117.0
+        with:
+          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+          bundler-cache: true
+
+      # grab mac and linux libraries that were built in the last section
+      - uses: actions/download-artifact@v3
+        with:
+          name: shared-libraries
+          path: ci-output/lib/
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Build binary & Gems
+        run: bundle exec rake ci:java
+
+      - uses: actions/upload-artifact@v3
+        name: Attach gems
+        with:
+          name: all-gems
+          path: ci-output/pkg/
+          if-no-files-found: error
+
+
+  specs:
+    runs-on:  ubuntu-latest # TODO: macos too?
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.117.0
+        with:
+          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Build binary & Gems
+        run: bundle exec rake ci:test
+
+# TODO:
+#https://github.com/kouki-h/linux_cross_openbsd/blob/main/Makefile
+#https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary

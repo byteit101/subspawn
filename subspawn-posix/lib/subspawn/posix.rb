@@ -1,5 +1,8 @@
 require 'libfixposix'
 require 'subspawn/posix/version'
+require 'subspawn/posix/ffi_helper'
+require 'subspawn/posix/signals'
+require 'subspawn/posix/pty'
 module SubSpawn
 class SpawnError < RuntimeError
 end
@@ -8,9 +11,10 @@ class POSIX
 	OpenFD = Struct.new(:fd, :path, :mode, :flags)
 	
 	def initialize(command, *args, arg0: command)
-		@path = self.class.which(command)
-		raise SpawnError, "Command not found: #{command}" unless @path
-		@argv = [arg0, *args.map(&:to_s)]
+		@path = command
+		#raise SpawnError, "Command not found: #{command}" unless @path
+		# TODO: we use envp, so can't check this now
+		@argv = [arg0, *args.map(&:to_str)]
 		@fd_map = {}
 		@fd_keeps = []
 		@fd_closes = []
@@ -24,16 +28,15 @@ class POSIX
 		@rlimits = {}
 		@umask = nil
 	end
-	attr_writer :signal_mask, :signal_default, :uid, :gid, :cwd
+	attr_writer :uid, :gid, :cwd, :ctty
 	
 	StdIn = 0
 	StdOut= 1
 	StdErr = 2
-	Std = {in: StdIn, out: StdOut, err: StdErr}
+	Std = {in: StdIn, out: StdOut, err: StdErr}.freeze
 	
 	def validate!
-		raise SpawnError, "Invalid path" unless @path.start_with? "/" # windows isn't supported, this is posix, fixed
-		@argv.map!(&:to_s)
+		@argv.map!(&:to_str) # By spec
 		raise SpawnError, "Invalid argv" unless @argv.length > 0
 		@fd_map = @fd_map.map do |number, source|
 			raise SpawnError, "Invalid FD map: Not a number: #{number.inspect}" unless number.is_a? Integer
@@ -45,7 +48,7 @@ class POSIX
 			fd_check(x.fd)
 			raise SpawnError, "Invalid FD open: Not a number: #{x.mode.inspect}" unless x.mode.is_a? Integer
 			raise SpawnError, "Invalid FD open: Not a flag: #{x.flags.inspect}" unless x.flags.is_a? Integer
-			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? path
+			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? x.path or Dir.exist?(File.dirname(x.path))
 		}
 		
 		raise SpawnError, "Invalid cwd path" unless @cwd.nil? or Dir.exist?(@cwd = ensure_file_string(@cwd))
@@ -55,7 +58,6 @@ class POSIX
 		
 		true
 	end
-	
 	
 	def spawn!
 		validate!
@@ -70,7 +72,7 @@ class POSIX
 				
 				@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
 				@fd_opens.each {|opn|
-					sfa.addopen(opn.fd, opn.path, opn.flags, opn.mode)
+					sfa.addopen(fd_number(opn.fd), opn.path, opn.flags, opn.mode)
 				}
 				@fd_map.map{|k, v| [k, fd_number(v)] }.each do |dest, src|
 					sfa.adddup2(src, dest)
@@ -87,13 +89,13 @@ class POSIX
 				end
 				
 				# set up signals
-				sa.sigmask = @signal_mask if @signal_mask
-				sa.sigdefault = @signal_default if @signal_default
+				sa.sigmask = @signal_mask.to_ptr if @signal_mask
+				sa.sigdefault = @signal_default.to_ptr if @signal_default
 				
 				# set up ownership and groups
 				sa.uid = @uid.to_i if @uid
 				sa.gid = @gid.to_i if @gid
-				sa.pgroup = @pid.to_i if @pid
+				sa.pgroup = @pgroup.to_i if @pgroup
 				sa.umask = @umask.to_i if @umask
 				
 				# Set up terminal control
@@ -105,7 +107,10 @@ class POSIX
 				
 				# allocate output (pid)
 				FFI::MemoryPointer.new(:int, 1) do |pid|
-					argv_str = @argv.map{|a|FFI::MemoryPointer.from_string a} + [nil] # null end of argv
+					argv_str = @argv.map{|a|
+						raise ArgumentError, "Nulls not allowed in command: #{a.inspect}" if a.include? "\0"
+						FFI::MemoryPointer.from_string a
+					} + [nil] # null end of argv
 					FFI::MemoryPointer.new(:pointer, argv_str.length) do |argv_holder|
 					
 						# ARGV
@@ -117,7 +122,7 @@ class POSIX
 							# Launch!
 							ret = LFP.spawnp(pid, @path, argv_holder, envp_holder, sfa, sa)
 							if ret != 0
-								SystemCallError.new("Spawn Error: #{ret}", errno)
+								raise SystemCallError.new("Spawn Error: #{ret}", LFP.errno)
 							end
 							out_pid = pid.read_int
 						end
@@ -132,6 +137,7 @@ class POSIX
 		out_pid
 	end
 	
+	# TODO: allow io on left?
 	def fd(number, io_or_fd)
 		num = number.is_a?(Symbol) ? Std[number] : number.to_i
 		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
@@ -143,7 +149,7 @@ class POSIX
 		self
 	end
 
-	def fd_open(number, path, flags = 0, mode=0)
+	def fd_open(number, path, flags = 0, mode=0o666) # umask will remove bits
 		num = number.is_a?(Symbol) ? Std[number] : number.to_i
 		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
 		@fd_opens << OpenFD.new(number, path, mode, flags)
@@ -161,6 +167,19 @@ class POSIX
 		@argv[0] = string.to_s
 		self
 	end
+	alias :name= :name
+
+	def args(args)
+		@argv = [@argv[0], *args.map(&:to_str)]
+		self
+	end
+	alias :args= :args
+	def command(cmd)
+		@path = cmd
+		self
+	end
+	alias :command= :command
+
 	def env_reset!
 		@env = :default
 		self
@@ -174,14 +193,30 @@ class POSIX
 		@env = hash.to_h
 		self
 	end
-	def signal_mask(sigmask_ptr)# TODO: terrible API
-		@signal_mask = sigmask_ptr
+	# usage:
+	# signal_mask = SigSet.empty.add(:usr1).delete("USR2")
+	# signal_mask(:full, exclude: [9])
+	def signal_mask(sigmask = :default, add: [], delete: [], block: [], allow: [])
+		sigmask = :empty if sigmask == :default
+		@signal_mask = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
+		@signal_mask.add(add, allow).delete(delete, block)
 		self
 	end
-	def signal_default(sigmask_ptr) # TODO: terrible API
-		@signal_default = sigmask_ptr
+	alias :signal_mask= :signal_mask
+	alias :sigmask= :signal_mask
+	alias :sigmask :signal_mask
+
+	# usage:
+	# signal_default = SigSet.empty.add(:usr1).delete("USR2")
+	# signal_default(:full, exclude: [9])
+	def signal_default(sigmask = :default, add: [], delete: [], default: [])
+		sigmask = :empty if sigmask == :default
+		@signal_default = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
+		@signal_default.add(add, default).delete(delete)
 		self
 	end
+	alias :signal_default= :signal_default
+
 	def umask=(value)
 		@umask = value.nil? ? nil : value.to_i
 		self
@@ -189,8 +224,8 @@ class POSIX
 	alias :umask :umask=
 
 	def owner(uid: none, gid: none)
-		@uid = uid unless uid.equals? none
-		@gid = gid unless gid.equals? none
+		@uid = uid unless uid.equal? none
+		@gid = gid unless gid.equal? none
 		self
 	end
 	def pwd(path)
@@ -199,37 +234,36 @@ class POSIX
 	end
 	alias :cwd :pwd
 	alias :pwd= :cwd=
+	alias :chdir :pwd
+	alias :chdir= :cwd=
 	
 	def sid!
 		@sid = true
 		self
 	end
 	def pgroup(pid)
-		@pgroup = pid
+		raise ArgumentError, "Invalid pgroup: #{pid}" if pid < 0 or !pid.is_a?(Integer)
+		@pgroup = pid.to_i
 		self
 	end
 	alias :pgroup= :pgroup
 	
-	def tty(path)
+	def ctty(path)
 		@ctty = path
 		self
 	end
-	alias :tty= :tty
-	alias :ctty= :tty
-	alias :ctty :tty
+	alias :tty= :ctty=
+	alias :tty :ctty
 	
 
-	def rlimit(key, cur, max=cur)
-		require 'subspawn/posix/ffi_helper'
-		key = if key.is_a? Inteter
+	def rlimit(key, cur, max=nil)
+		key = if key.is_a? Integer
 			key.to_i
-		else# TODO: is upcase ok?
+		else # TODO: these const lookup should have better error handling
 			Process.const_get("RLIMIT_#{key.to_s.upcase}")
-			#raise SpawnError, "Invaild rlimit key: #{key}"
 		end
-		raise SpawnError, "rlimit value was nil" if cur.nil?
-		cur = ensure_rlimit(key, cur)
-		max = ensure_rlimit(key, max || cur)
+		cur = ensure_rlimit(key, cur, 0)
+		max = ensure_rlimit(key, max, 1)
 		@rlimits[key] = [cur, max]
 		self
 	end
@@ -240,28 +274,61 @@ class POSIX
 	end
 	
 	
-	def self.which(path)
-		if defined? JRUBY_VERSION # JRuby has better lookup
-			which_jruby path
+
+	# generator for candidates for an executable name
+	# usage:
+	# SubSpawn::POSIX.each_which("ls", ENV) {|path| ...}
+	# SubSpawn::POSIX.each_which("ls", ENV).to_a
+	def self.expand_which(name, env=ENV)
+		return self.to_enum(:expand_which, name, env) unless block_given?
+		# only allow relative paths if they traverse, and if they traverse, only allow relative paths
+		if name.include? "/"
+			yield File.absolute_path(name)
 		else
-			which_mri path
+			env['PATH'].split(File::PATH_SEPARATOR).each do |path|
+				yield File.join(path, name)
+			end
 		end
 	end
-	private
 
-	def ensure_rlimit(key, value)
-		#if key.nil?
-		#	Process.getrlimit(key).last # if here, we are requesting max, as it was nil
-		#end
+	def self.shell_command(string)
+		# MRI scans for "basic" commands and if so, just un-expands the shell
+		# we could do that too, and there are 2 tests about that in rubyspec
+		# but we shall ignore them for now
+		# TODO: implement that
+		["sh", "-c", string.to_str]
+	end
+
+	COMPLETE_VERSION = {
+		subspawn_posix: SubSpawn::POSIX::VERSION,
+		libfixposix: LFP::COMPLETE_VERSION,
+	}
+
+	private
+	def none
+		@@none ||= Object.new
+	end
+	def ensure_rlimit(key, value, index)
+		if value.nil?
+			return Process.getrlimit(key)[index] # unspecified, load saved
+		end
 		return value.to_i if value.is_a? Integer
-		Process.const_get("RLIMIT_#{value.to_s.upcase}") # TODO: is upcase ok?
+		Process.const_get("RLIMIT_#{value.to_s.upcase}")
 	end
 
 	def make_envp
 		if @env == :default
 			yield LFP.get_environ
 		else
-			strings = @env.map{|k,v|FFI::MemoryPointer.from_string "#{k}=#{v}"} + [nil] # null end of argp
+			strings = @env.select{|k, v|
+				!k.nil? and !v.nil?
+			}.map{|k,v|
+				k = k.to_str
+				str = "#{k}=#{v.to_str}"  # rubyspec says to convert to_str
+				raise ArgumentError, "Nulls not allowed in environment variable: #{str.inspect}" if str.include? "\0" # By Spec
+				raise ArgumentError, "Variable key cannot include '=': #{str.inspect}" if k.include? "=" # By Spec
+				FFI::MemoryPointer.from_string str
+			} + [nil] # null end of argp
 			FFI::MemoryPointer.new(:pointer, strings.length) do |argp_holder|
 				argp_holder.write_array_of_pointer strings
 				yield argp_holder
@@ -300,22 +367,7 @@ class POSIX
 			raise SpawnError, "Invalid FD map: Not a io or number: #{source.inspect}"
 		end
 	end
-	def self.which_jruby(cmd)
-		require 'jruby'
-		org.jruby.util.ShellLauncher.findPathExecutable(JRuby.runtime, cmd)&.absolute_path
-	end
-	# TODO: test absoloute and relative
-	# https://stackoverflow.com/questions/2108727/which-in-ruby-checking-if-program-exists-in-path-from-ruby
-	def self.which_mri(cmd)
-	  exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
-	  ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
-		exts.each do |ext|
-		  exe = File.join(path, "#{cmd}#{ext}")
-		  return exe if File.executable?(exe) && !File.directory?(exe)
-		end
-	  end
-	  nil
-	end
+
 end
 end
 

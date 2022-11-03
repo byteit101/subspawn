@@ -10,7 +10,7 @@ class SubSpawn::IoHolder
 		tmp
 	end
 	def get(key)
-		@map[Internal.parse_fd(key, true)]
+		@map[SubSpawn::Internal.parse_fd(key, true)]
 	end
 	def composite? key
 		self.get(key).is_a? Composite

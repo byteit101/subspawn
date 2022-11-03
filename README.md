@@ -93,6 +93,8 @@ ffi-binary-libfixposix
 ----------------------
 A compiled binary gem of libfixposix in case you do not have or do not want to use a system-installed library. Use `require 'libfixposix/binary'` or `require 'subspawn/binary'` (TODO figure out namespacing) to enable.
 
+Note that to support cross-compiling, rake tasks are nonstandard. See `rake -T -a` for all options, but in essence, for local development, `rake gem:local` will build a gem file in pkg/ as usual, that you can `gem install pkg/*.gem`. For building for publishing, try `rake build:$TARGET` or `rake "target[x86_64-linux]" gem` (change target as appropriate). To just build the `.so` files, `rake binary` (local host) or `rake "binary[$TARGET]"` should be called.
+
 subspawn-posix
 -----------
 The mid-level API for Unixy machines. Exposes all the capabilities of libfixposix with none of the hassle of C or FFI.
@@ -101,4 +103,23 @@ The mid-level API for Unixy machines. Exposes all the capabilities of libfixposi
 subspawn
 -----------
 The unified high-level API for all Ruby platforms. Also includes post-launch utilities and a `PTY` library implementation.
+
+
+Roadmap
+------------
+0.1.0/0.4.90 - intial release
+0.2 - windows
+0.3 - better validation/errors
+
+
+
+After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+
+To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+
+
+
+## Contributing
+
+Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/process-wrapper-high.
 

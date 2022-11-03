@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+FINAL_IMAGE=empterdose/freebsd-cross-build:9.3
+# other options: (all larger)
+#FINAL_IMAGE=gotson/freebsd-cross-build:i686-11.4
+#FINAL_IMAGE=gotson/freebsd-cross-build:i686-12.2
+
+# If OCI_EXE is not already set, search for a container executor (OCI stands for "Open Container Initiative")
+if [ -z "$OCI_EXE" ]; then
+    if which podman >/dev/null 2>/dev/null; then
+        OCI_EXE=podman
+    elif which docker >/dev/null 2>/dev/null; then
+        OCI_EXE=docker
+    else
+        die "Cannot find a container executor. Search for docker and podman."
+    fi
+fi
+
+USER_IDS=(--user $( id -u ):$( id -g ))
+
+TTY_ARGS=-it
+$OCI_EXE run --rm $TTY_ARGS \
+    --platform linux/amd64 \
+    -v "$PWD":/workdir \
+    "${USER_IDS[@]}" \
+    $FINAL_IMAGE binary-builders/build-freebsd-shim.sh i386-freebsd9 "$@"

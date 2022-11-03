@@ -1,9 +1,36 @@
 require 'ffi'
 require 'subspawn/version'
 require 'subspawn/fd_parse'
+require 'subspawn/pty'
 if FFI::Platform.unix?
 	require 'subspawn/posix'
-	SubSpawn::Platform = SubSpawn::POSIX
+	if true
+		class SubSpawn::Platform
+			def initialize(*args, **kwargs)
+				puts "POSIX.new(#{args.inspect}, #{kwargs.inspect})"
+				@core = SubSpawn::POSIX.new(*args, **kwargs)
+			end
+			def method_missing(name, *args)
+				puts "\t.#{name}(#{args.inspect})"
+				ret = @core.send(name, *args)
+				if ret == @core
+					return self
+				else
+					return ret
+				end
+			end
+			class << self
+				def method_missing(name, *args)
+					SubSpawn::POSIX.send(name, *args)
+				end
+			end
+			COMPLETE_VERSION = SubSpawn::POSIX::COMPLETE_VERSION
+			VERSION = SubSpawn::POSIX::VERSION
+			PtyHelper = SubSpawn::POSIX::PtyHelper
+		end
+	else
+		SubSpawn::Platform = SubSpawn::POSIX
+	end
 elsif FFI::Platform.windows?
 	raise "SubSpawn Win32 is not yet implemented"
 else
@@ -13,7 +40,7 @@ end
 module SubSpawn
 	# TODO: things to check: set $?
 	def self.spawn_compat(command, *command2)
-		#File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
+		File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
 
 		# return just the pid
 		delta_env = nil
@@ -197,12 +224,19 @@ module SubSpawn
 	end
 
 	def self.pty_spawn_compat(*args, &block)
-		pty_spawn(args, &block)
+		if args.length == 1
+			__pty_spawn_internal(args, {}, {__ss_compat_shell: true}, &block)
+		else
+			__pty_spawn_internal(args, &block)
+		end
 	end
 	def self.pty_spawn(args, opts={}, &block)
+		__pty_spawn_internal(args, opts, &block)
+	end
+	def self.__pty_spawn_internal(args, opts={}, copt={},&block)
 		# TODO: setsid?
 		# TODO: MRI tries to pull the shell out of the ENV var, but that seems wrong
-		pid, args = SubSpawn.spawn(args, {[:in, :out, :err, :tty] => :pty, :sid => true}.merge(opts))
+		pid, args = SubSpawn.spawn(args, {[:in, :out, :err, :tty] => :pty, :sid => true}.merge(opts),copt)
 		tty = args[:tty]
 		list = [tty, tty, pid]
 		return list unless block_given?

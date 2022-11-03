@@ -16,8 +16,10 @@ if [ -z "$OCI_EXE" ]; then
     fi
 fi
 
-USER_IDS=(--user $( id -u ):$( id -g ))
-
+set -x
+if [ "$OCI_EXE" != "podman" ]; then
+    USER_IDS=(--user $( id -u ):$( id -g ))
+fi
 TTY_ARGS=-it
 $OCI_EXE run --rm $TTY_ARGS \
     --platform linux/amd64 \

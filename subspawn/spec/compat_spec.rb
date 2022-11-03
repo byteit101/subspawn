@@ -146,6 +146,37 @@ RSpec.describe SubSpawn do
 			expect { SubSpawn.spawn_compat(__FILE__)}.to raise_error(SystemCallError)
 		end
 
+		it "launches pry-like" do
+			cmd = %q{less -R -F -X}
+			#expect(d).to receive(:new).with(*cmd, arg0: "less").and_return(o)
+			SubSpawn::Platform::PtyHelper.open do |m, s|
+				#cmd = ["sh" "-c", "less -R -F -X"]
+				pid, spn = SubSpawn.spawn_compat(cmd, {0=>:pipe, [1, 2]=>s.fileno, :tty=>s.path, :sid=>true})
+				expect(pid).not_to eq 0
+				sleep 1
+				Process.kill(9, pid)
+				Process.wait pid
+			end
+		end
+
+		it "launches directly" do
+			SubSpawn::Platform::PtyHelper.open do |m, s|
+				cmd = ["sh" "-c", "less -R -F -X"]
+				cmd = %w{less -R -F -X}
+				r,w = IO.pipe
+				pid = SubSpawn::Platform.new(*cmd).
+						fd(0, r.fileno).fd(1, s.fileno).fd(2, s.fileno).
+						sid!.tty(s.path).
+						spawn!
+
+					#, {0=>r, [1, 2]=>s.fileno, :tty=>s.path, :sid=>true, :pgroup=>0})
+				expect(pid).not_to eq 0
+				sleep 1
+				Process.kill(9, pid)
+				Process.wait pid
+			end
+		end
+
 		it "does child stuff" do
 			# pid = SubSpawn.spawn_shell("sleep 3").first
 			# p pid

@@ -3,7 +3,7 @@ module SubSpawn::Internal
 		def initialize(dests, all_dests=dests)
 			@dests = dests
 			@all_dests = all_dests
-			raise SpwnError, "Can't provide :tty in this source list" if dests.include? :tty
+			raise SpawnError, "Can't provide :tty in this source list" if dests.include? :tty
 		end
 		attr_reader :dests, :all_dests
 
@@ -36,6 +36,7 @@ module SubSpawn::Internal
 			nil # TODO: return the io for basics? would need to cache the fds
 		end
 
+		# TODO: :tty in list shouldn't get here!
 		class Basic < FdSource
 			def initialize(dests, int)
 				super(dests)
@@ -118,12 +119,12 @@ module SubSpawn::Internal
 
 		class Pipe < Open
 			def initialize(dests, dir)
-				super(rdests)
+				super(dests)
 				@dir = dir
 			end
 			def apply base
 				@saved ||= IO.pipe
-				r, w = {read: @saved, write: @saved.reverse}[dir]
+				r, w = {read: @saved, write: @saved.reverse}[@dir]
 				raw_apply base, r
 				@dests.each {|dest| base.fd_close(w) } # if you want the other end, pass it in yourself
 

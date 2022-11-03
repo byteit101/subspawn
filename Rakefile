@@ -30,9 +30,11 @@ task "build" do
 	# bindings require binary to build
 	require_relative './ffi-binary-libfixposix/lib/libfixposix/binary/version'
 	ENV["LIBFIXPOSIX_PATH"] = LFP::Binary::PATH
+	puts "LIBFIXPOSIX_PATH=#{LFP::Binary::PATH}"
 
 	cd "ffi-bindings-libfixposix" do
-		sh 'rake build'
+		sh "rake build"
+		raise "Path error!" if Dir["pkg/*.gem"].to_s.include? "ERROR"
 	end
 	cd "ffi-binary-libfixposix" do
 		sh 'rake local'
@@ -67,30 +69,74 @@ task "clean" do
 	end
 end
 
+desc "CI test"
+task "ci:test" => %w{clean generate:ffi build} do
+	cd "subspawn-posix" do
+		sh 'rspec'
+	end
+	cd "subspawn" do
+		sh 'rspec'
+	end
+end
+
 
 desc "CI actions"
 task "ci:build" => %w{clean generate:ffi build} do
 	rm_rf "ci-output"
 
 	cd "ffi-binary-libfixposix" do
-		configs = {
-			darwin: ["x86_64"],
-			linux: ["x86", "x86_64"], #, "arm"]
-		}
-		target_os = RbConfig::CONFIG["target_os"].match(/^([^\d]+)/)[1] # strip any trailing versions, like darwin19
-		config = configs[target_os.to_sym]
-		raise "Target OS not found in configuration: #{target_os}" unless config
-		config.each do |config|
-			sh "rake clobber build:#{config}-#{target_os}"
-			destdir = "../ci-output/lib/#{config}-#{target_os}/"
-			mkdir_p destdir
-			cp LFP::Binary::PATH, destdir
-			mkdir_p "../ci-output/pkg/"
-			cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
+		sh "rake clobber" # delete "old" local build files
+		if RbConfig::CONFIG["target_os"].include? "darwin"
+			# macs only build mac stuff
+			%w{x86_64 arm64}.each do |cpu|
+				target = "cpu-darwin"
+				sh "rake clobber binary[#{target}] target[#{target}]"
+				destdir = "../ci-output/lib/#{target}/"
+				mkdir_p destdir
+				cp LFP::Binary::PATH, destdir
+				mkdir_p "../ci-output/pkg/"
+				cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
+			end
+		else
+			configs = {
+				linux: %w{x86 x86_64 armv6 armv7 arm64},
+				freebsd: %w{x86 x86_64}
+			}
+			#target_os = RbConfig::CONFIG["target_os"].match(/^([^\d]+)/)[1] # strip any trailing versions, like darwin19
+			#config = configs[target_os.to_sym]
+			#raise "Target OS not found in configuration: #{target_os}" unless config
+			configs.flat_map { |os, cpus| cpus.map{|cpu| "#{cpu}-#{os}"} }.each do |target|
+				sh "rake clobber cross:#{target} target[#{target}]"
+				destdir = "../ci-output/lib/#{target}/"
+				mkdir_p destdir
+				cp LFP::Binary::PATH, destdir
+				mkdir_p "../ci-output/pkg/"
+				cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
+			end
 		end
 	end
-	# now copy the other artifacts
-	%w{ffi-bindings-libfixposix subspawn-posix subspawn}.each do |folder|
-		cp Dir["#{folder}/pkg/*.gem"], "ci-output/pkg/"
+	unless RbConfig::CONFIG["target_os"].include? "darwin"
+		# now copy the other artifacts
+		%w{ffi-bindings-libfixposix subspawn-posix subspawn}.each do |folder|
+			cp Dir["#{folder}/pkg/*.gem"], "ci-output/pkg/" 
+		end
+	end
+end
+
+
+
+desc "CI actions"
+task "ci:java" do
+	cd "ffi-binary-libfixposix" do
+		sh "rake clobber"
+		Dir["../ci-output/lib/*"].each do |path|
+			cp_r path, "lib/libfixposix/binary/"
+		end
+		
+		sh "rake target[java]"
+		cp Dir["../ffi-binary-libfixposix/pkg/*java*.gem"], "../ci-output/pkg/"
+		Dir["../ci-output/lib/*"].each do |host|
+			rm_rf "lib/libfixposix/binary/#{File.basename host}"
+		end
 	end
 end

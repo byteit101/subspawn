@@ -5,14 +5,21 @@ require 'rubygems/package_task'
 require 'bundler'
 
 
-# currently supported binaries
+# currently supported binaries for building
 targets = [
-	%w{x86-linux i686-linux-gnu}, # UNTESTED
-	%w{x86_64-linux x86_64-linux-gnu},
-	%w{arm64-linux arm64-linux-gnu}, # UNTESTED
+	%w{x86-linux i686-linux-gnu linux-x86},
+	%w{x86_64-linux x86_64-linux-gnu linux-x64},
+	%w{arm64-linux aarch64-linux-gnu linux-arm64},
+	%w{armv7-linux armv7-linux-gnu linux-armv7},
+	%w{armv6-linux armv6-linux-gnu linux-armv6},
+	%w{s390x-linux s390x-ibm-linux-gnu linux-s390x},
+	%w{ppc64le-linux ppc64le-linux-gnu linux-ppc64le},
+	%w{riscv32-linux riscv32-linux-gnu linux-riscv32},
+	%w{riscv64-linux riscv64-linux-gnu linux-riscv64},
 	%w{x86_64-darwin x86_64-apple-darwin}, # UNTESTED
 	%w{arm64-darwin arm64-darwin}, # UNTESTED
-	# TODO: add other platforms, like the BSD's
+	%w{x86-freebsd i386-freebsd9 i386-freebsd9},
+	%w{x86_64-freebsd x86_64-freebsd9 x86_64-freebsd9},
 ]
 
 # define tab-completion helpers
@@ -21,36 +28,95 @@ targets.each do |(platform, host)|
 	task "build:#{platform}" do
 		task(:target).invoke(platform)
 	end
-	if platform != host
-		desc "Build gem for #{platform} (#{host})"
-		task "build:#{host}" do
-			task(:target).invoke(platform)
-		end
+	# if platform != host
+	# 	desc "Build gem for #{platform} (#{host})"
+	# 	task "build:#{host}" do
+	# 		task(:target).invoke(platform)
+	# 	end
+	# end
+	desc "Build binary #{platform} (#{host})"
+	task "cross:#{platform}" do
+		task(:cross).invoke(platform)
 	end
+end
+#desc "Build the gem for [target] via [dockcross]"
+task :cross, [:target] do |_, args|
+	platform, host, docker = targets.find{|x| x.include? args[:target] }
+	rm_rf "tmp/#{platform}"
+	mkdir_p "tmp/#{platform}/conf"
+	mkdir_p "tmp/#{platform}/out"
+	scriptsh = "tmp/#{platform}/build.sh"
+	fix32bit = platform == "x86-linux" ? "LD=ld" : "" # https://github.com/dockcross/dockcross/issues/735
+	File.write(scriptsh, <<~SCRIPT)
+		#!/bin/sh
+		echo $CROSS_TRIPLE "---" #{host}
+		set -x
+		set -e
+		source=$PWD/libfixposix
+		outdir=$(realpath $(dirname $0)/out)
+		cd `dirname $0`/conf
+		# i686 fails to build
+		$source/configure --enable-shared --disable-static --without-debug --host=#{host} --build x86_64-linux-gnu --prefix=/usr/ #{fix32bit}
+		make -j4
+		make install DESTDIR=$outdir
+		${CROSS_COMPILE}strip ../out/usr/lib/libfixposix.so
+	SCRIPT
+	chmod 0755, scriptsh
+	cd File.dirname(__dir__) do
+		if File.exist? "binary-builders/dockcross-#{docker}"
+			system(%Q{binary-builders/dockcross-#{docker} ffi-binary-libfixposix/#{scriptsh}})
+		else
+			system(%Q{binary-builders/manual-#{docker} ffi-binary-libfixposix/#{scriptsh}})
+		end
+		raise "Error!" if $? != 0
+	end
+	suffix = host.include?("darwin") ? "dylib" : "so"
+	dest =  "../ci-output/lib/#{platform}/libfixposix.#{suffix}"
+	mkdir_p(File.dirname(dest))
+	cp(
+		File.join("tmp/#{platform}/out/usr/lib/libfixposix.#{suffix}"), 
+		File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}"), 
+		verbose: true
+	)
+end
+
+def specfix(list)
+	list.map{|x|
+		if x.include? 'libfixposix.'
+			yield x
+		else
+			x
+		end
+	}
 end
 
 saved_target_arg = nil # rake SHOULD pass down args to dependant tasks, but gem isn't passing them through
 
 desc "Build the gem for [target] ex: `rake target[x86_64-linux]`"
 task :target, [:target] do |_, args|
-	platform, host = targets.find{|x| x.include? args[:target] }
+	platform, host = args[:target] == "java" ? %w{java java} : targets.find{|x| x.include? args[:target] }
 	raise "Missing platform, try target[platform-to-build], see rake -T for build: targets" if host.nil?
 	spec = Gem::Specification::load("ffi-binary-libfixposix.gemspec").dup
 	spec.platform = Gem::Platform.new(platform)
-	spec.files[-1] = spec.files.last.split(".").first + (platform.to_s.include?("darwin") ? ".dylib"  : ".so")
+	if host == "java"
+		spec.files = specfix(spec.files){ Dir["lib/libfixposix/binary/*/libfixposix.*"]}.flatten
+	else
+		spec.files = specfix(spec.files){|x|x.split(".").first + (platform.to_s.include?("darwin") ? ".dylib"  : ".so")}
+	end
+	p spec.files
 	task = Gem::PackageTask.new(spec)
 	saved_target_arg = host
 	puts "Generating gem task for #{platform}/#{host}"
 	task.define
-	task(:binary).invoke(platform)
-	task(:gem).invoke(platform)
+	#task(:binary).invoke(platform)
+	task(:gem).invoke()
 	Bundler.ui.confirm "#{spec.name} #{spec.version} built to pkg/#{File.basename(Dir[File.join(__dir__, "pkg", "#{spec.name}-*.gem")].sort_by {|f| File.mtime(f) }.last)}."
 end
 
 desc 'Builds the local libfixposix binary for the curent or specified host'
 task :binary, [:target] do |_, args|
 	recipe = MiniPortile.new("libfixposix", "current") # version doesn't matterz
-	host = args[:target] || saved_target_arg || recipe.original_host
+	host = args[:target] || saved_target_arg || recipe.original_host.sub(/redhat\-/,"")
 	recipe.host = host if host
 	host = host || RbConfig.expand("$(target_cpu)-$(target_os)") # mac os doesn't have it?
 	if host.match(/^(.*darwin)[\d.]+$/)
@@ -82,7 +148,9 @@ end
 
 
 desc "Build the gem into the pkg directory. (local platform build)"
-task "local" => :binary do
+task "local" => %w{binary local:raw}
+
+task "local:raw" => :binary do
 	spec = Gem::Specification::load("ffi-binary-libfixposix.gemspec")
 	task = Gem::PackageTask.new(spec)
 	task.define

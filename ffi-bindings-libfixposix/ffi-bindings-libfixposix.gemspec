@@ -2,7 +2,9 @@
 require 'ffi'
 begin
 require_relative "lib/libfixposix/version"
-rescue FFI::NotFoundError, LoadError # FFI = binary not found, but generated file present, LoadError = generated file missing
+rescue FFI::NotFoundError, LoadError => e # FFI = binary not found, but generated file present, LoadError = generated file missing
+  puts "Error: #{e}"
+  puts "This error is fine & expected if you are cleaning/clobbering"
   # generally only an issue when doing `rake clean`, so this shouldn't be seen
   module LFP
     VERSION="0.BINARY-NOT-BUILT-ERROR"

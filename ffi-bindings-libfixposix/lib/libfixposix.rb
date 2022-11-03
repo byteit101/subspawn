@@ -17,11 +17,11 @@ begin
 rescue LoadError
 	# no binary installed, use system wide or ENV var
 end
-require "libfixposix/ffi"
-require "libfixposix/version"
+require_relative "./libfixposix/ffi"
 
 # Extract bound version
 module LFP
+	VERSION = "#{LFP::INTERFACE_VERSION}.0"	
 	Buildinfo.new.tap {|ptr|
 		LFP.buildinfo(ptr)
 		SO_VERSION = [ptr[:release]].pack("L").unpack("ccc").reverse.join(".")

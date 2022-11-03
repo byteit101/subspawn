@@ -35,7 +35,7 @@ jobs:
         run: bundle install
 
       - name: Build binary & Gems
-        run: bundle exec rake ci:build
+        run: bundle exec rake ci-build
 
       - name: Attach shared libraries
         uses: actions/upload-artifact@v3
@@ -74,7 +74,7 @@ jobs:
         run: bundle install
 
       - name: Build binary & Gems
-        run: bundle exec rake ci:java
+        run: bundle exec rake ci-java
 
       - uses: actions/upload-artifact@v3
         name: Attach gems
@@ -100,7 +100,7 @@ jobs:
         run: bundle install
 
       - name: Build binary & Gems
-        run: bundle exec rake ci:test
+        run: bundle exec rake ci-test
 
 # TODO:
 #https://github.com/kouki-h/linux_cross_openbsd/blob/main/Makefile

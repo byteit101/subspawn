@@ -20,7 +20,7 @@ class POSIX
 		@fd_closes = []
 		@fd_opens = []
 		@signal_mask = @signal_default = nil
-		@uid = @gid = @cwd = nil
+		@cwd = nil
 		@sid = false
 		@pgroup = nil
 		@env = :default
@@ -28,7 +28,7 @@ class POSIX
 		@rlimits = {}
 		@umask = nil
 	end
-	attr_writer :uid, :gid, :cwd, :ctty
+	attr_writer :cwd, :ctty
 	
 	StdIn = 0
 	StdOut= 1
@@ -80,12 +80,17 @@ class POSIX
 				@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
 
 				unless @rlimits.empty?
-					rlimit = Internal::Rlimit.new
-					@rlimits.each {|key, (cur, max)|
-						rlimit[:rlim_cur] = cur.to_i
-						rlimit[:rlim_max] = max.to_i
-						sfa.setrlimit(key.to_i, rlimit)
-					}
+					# allocate output (pid)
+					FFI::MemoryPointer.new(LFP::Rlimit, @rlimits.length) do |rlimits|
+						# build array
+						@rlimits.each_with_index {|(key, (cur, max)), i|
+							rlimit = LFP::Rlimit.new(rlimits[i])
+							rlimit[:rlim_cur] = cur.to_i
+							rlimit[:rlim_max] = max.to_i
+							rlimit[:resource] = key.to_i
+						}
+						sa.setrlimit(rlimits, @rlimits.length)
+					end
 				end
 				
 				# set up signals
@@ -93,8 +98,6 @@ class POSIX
 				sa.sigdefault = @signal_default.to_ptr if @signal_default
 				
 				# set up ownership and groups
-				sa.uid = @uid.to_i if @uid
-				sa.gid = @gid.to_i if @gid
 				sa.pgroup = @pgroup.to_i if @pgroup
 				sa.umask = @umask.to_i if @umask
 				
@@ -223,11 +226,6 @@ class POSIX
 	end
 	alias :umask :umask=
 
-	def owner(uid: none, gid: none)
-		@uid = uid unless uid.equal? none
-		@gid = gid unless gid.equal? none
-		self
-	end
 	def pwd(path)
 		@cwd = path
 		self

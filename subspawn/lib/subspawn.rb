@@ -108,10 +108,6 @@ module SubSpawn
 				end
 			when :sid
 				base.sid! if value
-			when :uid, :userid, :user, :owner, :ownerid # TODO: which?
-				base.uid = value
-			when :gid, :groupid, :group # TODO: which?
-				base.gid = value
 			when :env
 				if env_opts[:deltas]
 					warn "Provided multiple ENV options"
@@ -130,8 +126,8 @@ module SubSpawn
 			when :pgroup, :new_pgroup, :process_group # P.s: pgroup, :new_pgroup
 				raise TypeError, "pgroup must be boolean or integral" if value.is_a? Symbol
 				base.pgroup = value == true ? 0 : value if value
-			when :flags # TODO: signals
-
+			when :signal_mask # TODO: signal_default
+				base.signal_mask(value)
 			when /rlimit_(.*)/ # P.s
 				name = $1
 				keys = [value].flatten

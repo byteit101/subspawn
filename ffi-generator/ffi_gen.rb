@@ -88,6 +88,8 @@ def type_decode(type, ast, arg=false)
 		when C::Struct
 			if type.name == "sigset_t"
 				pack({sigset: true})
+			elsif type.name == "rlimit"
+				pack({rlimit: true})
 			else
 				error("<struct: #{type.name}>")
 			end
@@ -111,8 +113,10 @@ def type_decode(type, ast, arg=false)
 					else
 						"<*#{tt.type.class} **= #{type.to_s} (#{tt.name})>".colorize(:light_red)
 					end
+				elsif tt.type.CustomType? and tt.type.name == "lfp_rlimit_t"
+					:opaque_ptr_array
 				else
-					"<*#{type.type.class} []= #{type.to_s}>".colorize(:light_red)
+					"<*#{tt.type.class} []= #{type.to_s}>".colorize(:light_red)
 				end
 			when C::Struct
 				if %w{opaque_ptr stat sockaddr msghdr cmsghdr rlimit timespec dirent sigset_t}.include? tt.name
@@ -330,8 +334,13 @@ EOS
 			[:class, name, name.split("_").map(&:capitalize).join(), s.members.map{|m| csizeof(m.type)}.sum]
 		else # struct only
 			sname = name2type(s.name, base)
-			layout = s.members.map do |mem|
-				[":#{mem.name}, #{to_ffi_types(mem.type, base, {})},", " # #{mem.sig}"]
+			layout = s.members.flat_map do |mem|
+				core = to_ffi_types(mem.type, base, {})
+				if core.is_a? String
+					[[":#{mem.name}, #{core},", " # #{mem.sig}"]]
+				else
+					core.map{|name, body, cmt| [":#{name}, :#{body},", " # #{mem.sig} - #{cmt}"]}
+				end
 			end
 			layout.last.first.sub!(/,$/, "")
 			layout = "layout #{layout.map{|x|x.join("")}.join("\n\t")}"
@@ -342,7 +351,7 @@ EOS
 		ptrsize = 8  #NOTE: assumes 64 bit, as there are no 128 bit machines 
 		case type
 		when :int, :uint,:bool then 4
-		when :out_num, :string then ptrsize
+		when :out_num, :string, :opaque_ptr then ptrsize
 		when PackedInfo
 			if type.data[:struct_out]
 				ptrsize
@@ -371,6 +380,9 @@ EOS
 				":" + name2enum(type.data[:funcptr], truebase)
 			elsif type.data[:ffi_t]
 				":" + type.data[:ffi_t]
+			elsif type.data[:rlimit]
+				# inline rlimit
+				[[:rlim_cur, :rlim_t, "The current (soft) limit"],[:rlim_max, :rlim_t, "The hard limit"]]
 			elsif type.data[:length] &&  type.data[:type] == :fixed_string
 				"[:uint8, #{type.data[:length]}]"
 			else

@@ -116,7 +116,7 @@ API guarantees:
 
 After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.
 
-To install these gem onto your local machine, run TODO:.
+To install these gem onto your local machine, run `bundle exec rake build` and install all the gems with `gem install */pkg/*.gem`.
 
 
 ## Contributing

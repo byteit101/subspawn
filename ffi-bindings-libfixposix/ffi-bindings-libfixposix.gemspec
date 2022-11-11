@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 require 'ffi'
+$LOAD_PATH << File.join(__dir__, "../ffi-binary-libfixposix/lib")
 begin
 require_relative "lib/libfixposix/version"
 rescue FFI::NotFoundError, LoadError => e # FFI = binary not found, but generated file present, LoadError = generated file missing
@@ -8,6 +9,9 @@ rescue FFI::NotFoundError, LoadError => e # FFI = binary not found, but generate
   # generally only an issue when doing `rake clean`, so this shouldn't be seen
   module LFP
     VERSION="0.BINARY-NOT-BUILT-ERROR"
+    module Binary
+      API_VERSION="0.BINARY-NOT-FOUND-ERROR"
+    end
   end
 end
 

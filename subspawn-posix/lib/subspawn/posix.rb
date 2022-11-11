@@ -85,6 +85,7 @@ class POSIX
 						# build array
 						@rlimits.each_with_index {|(key, (cur, max)), i|
 							rlimit = LFP::Rlimit.new(rlimits[i])
+							#puts "building rlim at #{i} to #{[cur, max, key]}"
 							rlimit[:rlim_cur] = cur.to_i
 							rlimit[:rlim_max] = max.to_i
 							rlimit[:resource] = key.to_i
@@ -262,6 +263,7 @@ class POSIX
 		end
 		cur = ensure_rlimit(key, cur, 0)
 		max = ensure_rlimit(key, max, 1)
+		cur = max if cur > max
 		@rlimits[key] = [cur, max]
 		self
 	end
@@ -308,7 +310,7 @@ class POSIX
 	end
 	def ensure_rlimit(key, value, index)
 		if value.nil?
-			return Process.getrlimit(key)[index] # unspecified, load saved
+			return Process.getrlimit(key).tap{|q| puts "qrlimit got: #{q.inspect} for #{index}"}[index] # unspecified, load saved
 		end
 		return value.to_i if value.is_a? Integer
 		Process.const_get("RLIMIT_#{value.to_s.upcase}")

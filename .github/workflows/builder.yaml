@@ -96,6 +96,9 @@ jobs:
           ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
           bundler-cache: true
 
+      - name: Install Less
+        run: sudo apt update && sudo apt install -y less
+
       - name: Install dependencies
         run: bundle install
 

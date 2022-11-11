@@ -15,9 +15,11 @@ If bundler is not being used to manage dependencies, install the gem by executin
 ## Usage
 
 ```rb
-require 'libfixposix/binary' # if you want to use ffi-binary-libfixposix
 require 'libfixposix'
 ```
+Note that binaries are picked up automatically, they don't need to be manually required. See parent SubSpawn for more information.
+
+`lfp_foo(...)` is mapped to `LFP.foo(...)` and simple class wrappers are generated too. See ffi.rb (generated) for all methods mapped from C. Use `LFP::INTERFACE_VERSION`, `LFP::SO_VERSION`, and/or `LFP::COMPLETE_VERSION` as appropriate.
 
 ## Development
 

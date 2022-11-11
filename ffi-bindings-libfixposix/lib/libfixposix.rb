@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-
-# TODO: check for binaries?
 module LFP
 	module LFPFile
 		def self.local_so

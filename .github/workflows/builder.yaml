@@ -86,6 +86,8 @@ jobs:
 
   specs:
     runs-on:  ubuntu-latest # TODO: macos too?
+
+    # less doesn't work (and thus tests fails) unless TERM is set. Not set on GHA by default
     env:
       TERM: xterm
     steps:

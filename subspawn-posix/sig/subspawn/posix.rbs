@@ -11,11 +11,6 @@ module SubSpawn
 
 		def initialize: (String command, *String args, ?arg0: String) -> nil
 
-		# owner attributes
-		attr_writer uid: Integer
-		attr_writer gid: Integer
-		def owner: (?uid: Integer, ?gid: Integer) -> self
-
 		# Environmental attributes
 		attr_writer cwd: String | File
 		def cwd: (String | File) -> self

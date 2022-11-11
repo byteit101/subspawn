@@ -95,14 +95,15 @@ The mid-level API for Unixy machines. Exposes all the capabilities of libfixposi
 
 subspawn
 -----------
-The unified high-level API for all Ruby platforms. Also includes post-launch utilities and a `PTY` library implementation. The main interface is `SubSpawn.spawn()` which is modeled after `Process.spawn`, but with extended features. These extended features can be brought into `Process.spawn` itself with `subspawn/replace`.
+The unified high-level API for all Ruby platforms. Also includes post-launch utilities and a `PTY` library implementation. The main interface is `SubSpawn.spawn()` which is modeled after `Process.spawn`, but with extended features. These extended features can be brought into `Process.spawn` itself with `subspawn/replace`. This lets `Open3` and other utilities that pass args to `spawn` also benefit from the extra features of SubSpawn.
 
 
 Roadmap
 ------------
-0.1 - intial release
-0.2 - windows?
-0.3 - better validation/errors
+
+ * 0.1 - intial release
+ * 0.2 - windows & install-time builds
+ * 0.3 - better validation/errors
 
 Please note that SubSpawn is still in its infancy and is being actively developed.
 

@@ -275,7 +275,7 @@ end
 			m << "q" # amusingly, we don't need to set stdin for this to work. Thanks less!
 
 			# TODO: setsid? Unsure if necessary
-			expect(do_shell_spawn(%Q{less /proc/$$/stat}){|x|x.tty = s.path; x.fd(:out, s)}).to eq 0
+			expect(do_shell_spawn(%Q{less /proc/kallsyms}){|x|x.tty = s.path; x.fd(:out, s)}).to eq 0
 			sleep 0.1
 			expect(m.read_nonblock(3)).to eq "q\e[" # less should think this is escape time
 
@@ -418,7 +418,7 @@ end
 			current = File.read(T).strip.to_i
 
 			expect(do_shell_spawn(%Q{ulimit -n > #{T}}){|x|x.rlimit(:nofile, nil, 2048)}).to eq 0
-			expect(File.read(T).strip.to_i).to eq current
+			expect(File.read(T).strip.to_i).to eq [2048, current].min
 		end
 	end
 end

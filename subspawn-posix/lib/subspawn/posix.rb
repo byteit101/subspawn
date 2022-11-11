@@ -85,6 +85,7 @@ class POSIX
 						# build array
 						@rlimits.each_with_index {|(key, (cur, max)), i|
 							rlimit = LFP::Rlimit.new(rlimits[i])
+							#puts "building rlim at #{i} to #{[cur, max, key]}"
 							rlimit[:rlim_cur] = cur.to_i
 							rlimit[:rlim_max] = max.to_i
 							rlimit[:resource] = key.to_i
@@ -262,6 +263,7 @@ class POSIX
 		end
 		cur = ensure_rlimit(key, cur, 0)
 		max = ensure_rlimit(key, max, 1)
+		cur = max if cur > max
 		@rlimits[key] = [cur, max]
 		self
 	end

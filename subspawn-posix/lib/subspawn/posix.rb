@@ -310,7 +310,7 @@ class POSIX
 	end
 	def ensure_rlimit(key, value, index)
 		if value.nil?
-			return Process.getrlimit(key).tap{|q| puts "qrlimit got: #{q.inspect} for #{index}"}[index] # unspecified, load saved
+			return Process.getrlimit(key)[index] # unspecified, load saved
 		end
 		return value.to_i if value.is_a? Integer
 		Process.const_get("RLIMIT_#{value.to_s.upcase}")

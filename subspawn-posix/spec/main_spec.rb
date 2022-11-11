@@ -275,7 +275,7 @@ end
 			m << "q" # amusingly, we don't need to set stdin for this to work. Thanks less!
 
 			# TODO: setsid? Unsure if necessary
-			expect(do_shell_spawn(%Q{less /proc/kallsyms}){|x|x.tty = s.path; x.fd(:out, s)}).to eq 0
+			expect(do_shell_spawn(%Q{less /proc/kallsyms}){|x|x.tty = s.path; x.sid!; x.fd(:out, s)}).to eq 0
 			sleep 0.1
 			expect(m.read_nonblock(3)).to eq "q\e[" # less should think this is escape time
 

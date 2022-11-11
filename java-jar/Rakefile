@@ -1,0 +1,39 @@
+
+desc 'Build a jarified gem'
+task :build do
+	rm_rf 'target'
+	mkdir_p 'target'
+	cp_r '../ffi-bindings-libfixposix/lib', 'target'
+	cp_r '../ci-output/lib', 'target/lib/libfixposix/binary'
+	cp_r '../ffi-binary-libfixposix/lib', 'target'
+	cp_r '../subspawn-posix/lib', 'target'
+	cp_r '../subspawn/lib', 'target'
+	target = "#{ENV['JRUBY_DIR']}/lib/ruby/stdlib/"
+	raise "JRUBY_DIR not found" unless File.exist? target
+
+	# jruby packaging vs fast iter
+	if false 
+		if false
+		rm File.join(target, "subspawn")
+		rm File.join(target, "subspawn.rb")
+		rm File.join(target, "libfixposix")
+		rm File.join(target, "libfixposix.rb")
+		ln_s "#{__dir__}/target/lib/subspawn", target
+		ln_s "#{__dir__}/target/lib/subspawn.rb", target
+		ln_s "#{__dir__}/target/lib/libfixposix", target
+		ln_s "#{__dir__}/target/lib/libfixposix.rb", target
+		end
+	else
+		rm_rf File.join(target, "subspawn")
+		rm_rf File.join(target, "subspawn.rb")
+		rm_rf File.join(target, "libfixposix")
+		rm_rf File.join(target, "libfixposix.rb")
+
+	cp_r "target/lib/subspawn", target
+	cp_r "target/lib/subspawn.rb", target
+	cp_r "target/lib/libfixposix", target
+	cp_r "target/lib/libfixposix.rb", target
+	end
+end
+
+task default: :build

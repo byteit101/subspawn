@@ -114,13 +114,20 @@ API guarantees:
  * subspawn (high-level) will otherwise use semantic versioning
 
 
+# Development
 
 After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.
 
 To install these gem onto your local machine, run `bundle exec rake build` and install all the gems with `gem install */pkg/*.gem`.
 
+Test by integrating into JRuby. Notable tests:
+
+ * io/console. check out and run `TESTOPTS="--verbose" jruby -S rake test`
+ * rspec tests. check out jruby and run `bin/jruby -S rake spec:ruby`, looking for spawn or PTY errors 
+
+For local JRby integration testing, consider running `rerun --no-notify --ignore 'java-jar/*' 'cd java-jar && rake'` after you export `JRUBY_DIR` to the path to your jruby source checkout
+
 
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/byteit101/subspawn.
-

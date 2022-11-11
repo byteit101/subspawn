@@ -97,7 +97,7 @@ task :target, [:target] do |_, args|
 	platform, host = args[:target] == "java" ? %w{java java} : targets.find{|x| x.include? args[:target] }
 	raise "Missing platform, try target[platform-to-build], see rake -T for build: targets" if host.nil?
 	spec = Gem::Specification::load("ffi-binary-libfixposix.gemspec").dup
-	spec.platform = Gem::Platform.new(platform)
+	spec.original_platform = spec.platform = Gem::Platform.new(platform)
 	if host == "java"
 		spec.files = specfix(spec.files){ Dir["lib/libfixposix/binary/*/libfixposix.*"]}.flatten
 	else

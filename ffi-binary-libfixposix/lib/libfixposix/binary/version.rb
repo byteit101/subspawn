@@ -3,7 +3,7 @@ require 'ffi'
 
 module LFP
 	module Binary
-		API_VERSION = "0.5.0" # the same as the binary, but hard coded
+		API_VERSION = "0.5.1" # the same as the binary, but hard coded
 		GEM_VERSION = "#{API_VERSION}.0"
 		NAME = if FFI::Platform.mac?
 			"libfixposix.dylib"

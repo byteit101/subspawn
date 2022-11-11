@@ -17,7 +17,7 @@ RSpec.describe SubSpawn do
 						:interface=>"0.5.0",
 						:library=>"0.5.0"
 					},
-					:gem=>"0.5.0",
+					:gem=>"0.5.0.0",
 					:interface=>"0.5.0",
 					:library=>"0.5.0"
 				},

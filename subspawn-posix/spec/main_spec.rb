@@ -65,7 +65,7 @@ RSpec.describe SubSpawn::POSIX do
 			expect(File.read(T)).to eq "my name\n"
 		end
 	end
-
+if false # uid, gid were removed in 0.5
 	context "Owner Attributes (non-root, run as sudo to validate)", :if => Process.uid != 0 do
 		it "fails to change owners (run this suite as root to validate)" do
 			expect{do_shell_spawn(%Q{whoami > #{T}}){|x|x.owner(uid:0,gid:0)}}.to raise_error(SystemCallError)
@@ -82,6 +82,7 @@ RSpec.describe SubSpawn::POSIX do
 			expect(File.read(T)).to start_with("id=1000")
 		end
 	end
+end
 
 	context "Execution Environment" do 
 		it "can change cwd" do
@@ -276,7 +277,6 @@ RSpec.describe SubSpawn::POSIX do
 			# TODO: setsid? Unsure if necessary
 			expect(do_shell_spawn(%Q{less /proc/$$/stat}){|x|x.tty = s.path; x.fd(:out, s)}).to eq 0
 			sleep 0.1
-			p m.read_nonblock(10)
 			expect(m.read_nonblock(3)).to eq "q\e[" # less should think this is escape time
 
 			# TODO: failure = hang (Not great)

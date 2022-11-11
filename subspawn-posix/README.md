@@ -15,9 +15,12 @@ If bundler is not being used to manage dependencies, install the gem by executin
 ## Usage
 
 ```rb
-require 'subspawn/binary' # if you need binaries, otherwise system libfixposix is used
 require 'subspawn/posix'
 ```
+
+See SubSpawn for more details.
+
+An RBS file exists for this gem.
 
 ## Development
 

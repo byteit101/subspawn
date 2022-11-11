@@ -13,17 +13,17 @@ RSpec.describe SubSpawn do
 			:platform => {
 				:libfixposix=>{
 					:binary=>{
-						:gem=>"0.5.0.0-dev",
+						:gem=>"0.5.0.0",
 						:interface=>"0.5.0",
 						:library=>"0.5.0"
 					},
-					:gem=>"0.5.0-dev.0",
-					:interface=>"0.5.0-dev",
+					:gem=>"0.5.0",
+					:interface=>"0.5.0",
 					:library=>"0.5.0"
 				},
-				:subspawn_posix=>"0.1.0-dev"
+				:subspawn_posix=>"0.1.0"
 			},
-			:subspawn => "0.1.0-dev"
+			:subspawn => "0.1.0"
 			})
 	end
 	def nexpect thing

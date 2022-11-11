@@ -16,7 +16,9 @@ If bundler is not being used to manage dependencies, install the gem by executin
 
 ```rb
 require 'libfixposix/binary'
+p LFP::Binary::PATH
 ```
+See parent SubSpawn for more details
 
 ## Development
 

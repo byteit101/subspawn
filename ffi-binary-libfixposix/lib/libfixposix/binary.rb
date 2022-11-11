@@ -6,7 +6,7 @@ module LFP
 	module Binary
 
 		# TODO: we do depend on ffi-bindings, but they depend on us. 
-		# make this one-off check class to avoid circular dependency
+		# make this one-off check class to avoid circular dependencies
 		module InternalLocalCheck
 			extend FFI::Library
 			ffi_lib(PATH)

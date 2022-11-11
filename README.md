@@ -46,39 +46,33 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
 
 Installation
 -----------
-If you have libfixposix installed system wide on your distribution:
+For now, only POSIX systems are supported:
 ```
-$ gem install subspawn
+$ gem install subspawn subspawn-posix
 
-> require 'subspawn'
-```
-If you would like to use our bundled binaries:
-```
-gem install subspawn ffi-binary-libfixposix
-
-> require 'libfixposix/binary' # TODO: figure out namespacing
-> require 'subspawn'
+require 'subspawn'
+# or, to replace the built in spawn methods:
+# require 'subspawn/replace'
 ```
 
+Using JRuby? Subspawn is already installed!
 
 What is in this repository
 -------
 
 Folders:
- - libfixposix (build only, for ffi-generator)
+ - libfixposix (build only, subrepository, for ffi-generator)
  - ffi-generator (build only)
  - ffi-bindings-libfixposix (gem)
  - ffi-binary-libfixposix (gem)
  - subspawn-posix (gem)
  - subspawn (gem)
- - jruby-jar (gem/jar)
-
+ - jruby-jar (gem/jar building utilities)
 
 
 libfixposix
 -----------
-
-The underlying library used is libfixposix. Currently the most recent and most widely distributed version in distros is 0.4.3, so we use that. Once 0.5.0 is in most distros, consider releasing that.
+The underlying library used is libfixposix. Currently the most recent and most widely distributed version in distros is 0.4.3. However, it doesn't support features we need, so we bundle 0.5.0.
 In order to use libfixposix, you must configure the build, or just remove the `#if @VAR@` statements in the headers. See where ffi-generator complains to know what to remove.
 
 ffi-generator
@@ -87,39 +81,45 @@ ffi_gen takes the libfixposix include headers and generates ruby ffi bindings fo
 
 ffi-bindings-libfixposix
 ------------------------
-Raw bindings to libfixposix. binary not included, defaults to system so/dynlib. No translation, pure pointers. Usable if you want to use libfixposix in unrelated Ruby code
+Raw bindings to libfixposix. binary not included, but attempts to load if present. No translation, pure pointers. Usable if you want to use libfixposix in unrelated Ruby code. Generated output is ffi.rb to map all C functions to Ruby.
 
 ffi-binary-libfixposix
 ----------------------
-A compiled binary gem of libfixposix in case you do not have or do not want to use a system-installed library. Use `require 'libfixposix/binary'` or `require 'subspawn/binary'` (TODO figure out namespacing) to enable.
+A compiled binary gem of libfixposix in case you do not have or do not want to use a system-installed library. Use `require 'libfixposix/binary'` to get the path.
 
-Note that to support cross-compiling, rake tasks are nonstandard. See `rake -T -a` for all options, but in essence, for local development, `rake gem:local` will build a gem file in pkg/ as usual, that you can `gem install pkg/*.gem`. For building for publishing, try `rake build:$TARGET` or `rake "target[x86_64-linux]" gem` (change target as appropriate). To just build the `.so` files, `rake binary` (local host) or `rake "binary[$TARGET]"` should be called.
+Note that to support cross-compiling, rake tasks are nonstandard. See `rake -T -a` for all options, but in essence, for local development, `rake local` will build a gem file in pkg/ as usual, that you can `gem install pkg/*.gem`. For building for publishing, try `rake cross:$TARGET` or `rake "target[x86_64-linux]" gem` (change target as appropriate). To just build the `.so` files, `rake binary` (local host) or `rake "binary[$TARGET]"` should be called.
 
 subspawn-posix
 -----------
-The mid-level API for Unixy machines. Exposes all the capabilities of libfixposix with none of the hassle of C or FFI.
-
+The mid-level API for Unixy machines. Exposes all the capabilities of libfixposix with none of the hassle of C or FFI. Look at the included RBS file for all methods and types. Also includes minimal PTY opening helper.
 
 subspawn
 -----------
-The unified high-level API for all Ruby platforms. Also includes post-launch utilities and a `PTY` library implementation.
+The unified high-level API for all Ruby platforms. Also includes post-launch utilities and a `PTY` library implementation. The main interface is `SubSpawn.spawn()` which is modeled after `Process.spawn`, but with extended features. These extended features can be brought into `Process.spawn` itself with `subspawn/replace`.
 
 
 Roadmap
 ------------
-0.1.0/0.4.90 - intial release
-0.2 - windows
+0.1 - intial release
+0.2 - windows?
 0.3 - better validation/errors
 
+Please note that SubSpawn is still in its infancy and is being actively developed.
+
+API guarantees:
+
+ * Rubyspec will continue to pass (Process.spawn & PTY.spawn are compatble with Subspawn.compat*)
+ * subspawn-`$PLATFORM` may change from 0.1 to 0.2, etc
+ * subspawn (high-level) will otherwise use semantic versioning
 
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.
 
+To install these gem onto your local machine, run TODO:.
 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/process-wrapper-high.
+Bug reports and pull requests are welcome on GitHub at https://github.com/byteit101/subspawn.
 

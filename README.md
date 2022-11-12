@@ -131,3 +131,10 @@ For local JRby integration testing, consider running `rerun --no-notify --ignore
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/byteit101/subspawn.
+
+# License
+
+SubSpawn is licensed under a tri EPL/LGPL/Ruby license. You can use it, redistribute it and/or modify it under the terms of the:
+
+[Eclipse Public License version 2.0](https://spdx.org/licenses/EPL-2.0.html) OR [GNU Lesser General Public License version 2.1 (or later)](https://spdx.org/licenses/LGPL-2.1-or-later.html) OR [Ruby License](https://spdx.org/licenses/Ruby.html)
+

@@ -20,7 +20,7 @@ module SubSpawn::POSIX::Internal
 	module OpenPTY
 		extend FFI::Library
 
-		ffi_lib FFI::Platform.mac? ? FFI::Library::LIBC : "util"
+		ffi_lib FFI::Platform.mac? ? FFI::Library::LIBC : ["libutil.so.1", "util"]
 		attach_function :openpty, [:buffer_out, :buffer_out, :buffer_out, :buffer_in, :buffer_in], :int
 
 		ffi_lib FFI::Library::LIBC

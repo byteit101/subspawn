@@ -5,6 +5,7 @@ module LFP
 		def self.local_so
 			list = []
 			list += ENV["LIBFIXPOSIX_PATH"].split(";;") if ENV["LIBFIXPOSIX_PATH"]
+			list << "libfixposix.so.4"
 			list << "fixposix"
 			list
 		end

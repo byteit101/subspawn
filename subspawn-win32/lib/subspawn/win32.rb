@@ -155,95 +155,69 @@ class Win32
 		validate!
 		startupinfo = W::StartupInfo.new # ffi gem zeros memory for us
 		proc_info = W::ProcInfo.new
-		raise "Spawn Init Error" if 0 != sfa.init
 		out_pid = nil
-		begin
-			raise "Spawn Init Error" if 0 != sa.init
-			begin
-				# set up file descriptors
-				
-				@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
-				@fd_opens.each {|opn|
-					sfa.addopen(fd_number(opn.fd), opn.path, opn.flags, opn.mode)
-				}
-				@fd_map.map{|k, v| [k, fd_number(v)] }.each do |dest, src|
-					sfa.adddup2(src, dest)
-				end
-				@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
+		# set up file descriptors
+		
+		# TODO: SetHandleInformation(Inherit) etc
+		#@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
+		#@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
 
-				unless @rlimits.empty?
-					# allocate output (pid)
-					FFI::MemoryPointer.new(LFP::Rlimit, @rlimits.length) do |rlimits|
-						# build array
-						@rlimits.each_with_index {|(key, (cur, max)), i|
-							rlimit = LFP::Rlimit.new(rlimits[i])
-							#puts "building rlim at #{i} to #{[cur, max, key]}"
-							rlimit[:rlim_cur] = cur.to_i
-							rlimit[:rlim_max] = max.to_i
-							rlimit[:resource] = key.to_i
-						}
-						sa.setrlimit(rlimits, @rlimits.length)
-					end
-				end
-				
-				# set up signals
-				sa.sigmask = @signal_mask.to_ptr if @signal_mask
-				sa.sigdefault = @signal_default.to_ptr if @signal_default
-				
-				# set up ownership and groups
-				sa.pgroup = @pgroup.to_i if @pgroup
-				sa.umask = @umask.to_i if @umask
-				
-				# Set up terminal control
-				sa.setsid if @sid
-				sa.ctty = @ctty if @ctty
+		startupinfo.dwFlags = W::STARTF_USESTDHANDLES
+		startupinfo.hStdInput = handle_for(0)
+		startupinfo.hStdOutput = handle_for(1)
+		startupinfo.hStdError = handle_for(2)
 
-				# TODO: allow configuring inherit handles. CRuby force this to true, so we will copy that for now
-				hndl_inheritance = true
-				sa = W::SecurityAttributes.new
-				sa.bInheritHandle = hndl_inheritance
-				
-				flags = 0
-				flags |= W::CREATE_UNICODE_ENVIRONMENT # ENVP
-				flags |= W::NORMAL_PRIORITY_CLASS # TODO: allow configuring priority
+		# TODO: does windows have rlimits?
+		
+		# set up ownership and groups
+		sa.pgroup = @pgroup.to_i if @pgroup
+		#sa.umask = @umask.to_i if @umask
+		
+		# Set up terminal control
+		#sa.setsid if @sid
+		#TODO: PTY!
+		#sa.ctty = @ctty if @ctty
 
-				# ARGV
-				argv_str = build_argstr
-				# TODO: move this validation to validate!
-				raise SpawnError, "Argument string is too long. #{argv_str.size} must be less than (1 << 15)" if argv_str.size >= (1 << 15)
-				
-				# ARGP/ENV
-				make_envp do |envp_holder|
+		# TODO: allow configuring inherit handles. CRuby force this to true, so we will copy that for now
+		hndl_inheritance = true
+		sa = W::SecurityAttributes.new
+		sa.bInheritHandle = hndl_inheritance
+		
+		flags = 0
+		flags |= W::CREATE_UNICODE_ENVIRONMENT # ENVP
+		flags |= W::NORMAL_PRIORITY_CLASS # TODO: allow configuring priority
 
-					# Launch!
-					# Note that @path can be null on windows, but we will always enforce otherwise
-					ret = W.CreateProcess(
-						@path.to_wstr, # DONE
-						argv_str,  #DONE
-						sa, # proc_sec, DONE, but unexposed
-						sa, # thread_sec, DONE, but unexposed
-						hndl_inheritance, # DONE, but unexposed
-						flags, # DONE, but unexposed
-						envp_holder, # DONE
-						@cwd.to_wstr, # DONE
-						startupinfo,
-						proc_info # DONE
-					)
-					if !ret
-						# TODO: CRuby does map_errno(GetLastError()) Do we need to do that for does FFI.errno do that already?
-						raise SystemCallError.new("Spawn Error: CreateProcess", FFI.errno)
-					end
-					W.CloseHandle(proc_info.hProcess)
-					W.CloseHandle(proc_info.hThread)
-					# being a spawn clone, we don't normally expose the thread, but assign it if anyone wants it
-					@out_thread = proc_info.dwThreadId
-					out_pid = proc_info.dwProcessId
-				end
-			ensure
-				sa.destroy
+		# ARGV
+		argv_str = build_argstr
+		# TODO: move this validation to validate!
+		raise SpawnError, "Argument string is too long. #{argv_str.size} must be less than (1 << 15)" if argv_str.size >= (1 << 15)
+		
+		# ARGP/ENV
+		make_envp do |envp_holder|
+
+			# Launch!
+			# Note that @path can be null on windows, but we will always enforce otherwise
+			ret = W.CreateProcess(
+				@path.to_wstr, # DONE
+				argv_str,  #DONE
+				sa, # proc_sec, DONE, but unexposed
+				sa, # thread_sec, DONE, but unexposed
+				hndl_inheritance, # DONE, but unexposed
+				flags, # DONE, but unexposed
+				envp_holder, # DONE
+				@cwd.to_wstr, # DONE
+				startupinfo,
+				proc_info # DONE
+			)
+			if !ret
+				# TODO: CRuby does map_errno(GetLastError()) Do we need to do that for does FFI.errno do that already?
+				raise SystemCallError.new("Spawn Error: CreateProcess", FFI.errno)
 			end
-		ensure
-			sfa.destroy
+			W.CloseHandle(proc_info.hProcess)
+			W.CloseHandle(proc_info.hThread)
+			# being a spawn clone, we don't normally expose the thread, but assign it if anyone wants it
+			@out_thread = proc_info.dwThreadId
+			out_pid = proc_info.dwProcessId
 		end
 		out_pid
 	end
@@ -260,12 +234,6 @@ class Win32
 		self
 	end
 
-	def fd_open(number, path, flags = 0, mode=0o666) # umask will remove bits
-		num = number.is_a?(Symbol) ? Std[number] : number.to_i
-		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
-		@fd_opens << OpenFD.new(number, path, mode, flags)
-		self
-	end
 	def fd_keep(io_or_fd)
 		@fd_keep << io_or_fd
 		self
@@ -304,35 +272,9 @@ class Win32
 		@env = hash.to_h
 		self
 	end
-	# usage:
-	# signal_mask = SigSet.empty.add(:usr1).delete("USR2")
-	# signal_mask(:full, exclude: [9])
-	def signal_mask(sigmask = :default, add: [], delete: [], block: [], allow: [])
-		sigmask = :empty if sigmask == :default
-		@signal_mask = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
-		@signal_mask.add(add, allow).delete(delete, block)
-		self
-	end
-	alias :signal_mask= :signal_mask
-	alias :sigmask= :signal_mask
-	alias :sigmask :signal_mask
 
-	# usage:
-	# signal_default = SigSet.empty.add(:usr1).delete("USR2")
-	# signal_default(:full, exclude: [9])
-	def signal_default(sigmask = :default, add: [], delete: [], default: [])
-		sigmask = :empty if sigmask == :default
-		@signal_default = sigmask.is_a?(Symbol) ? SigSet.send(sigmask) : sigmask
-		@signal_default.add(add, default).delete(delete)
-		self
-	end
-	alias :signal_default= :signal_default
-
-	def umask=(value)
-		@umask = value.nil? ? nil : value.to_i
-		self
-	end
-	alias :umask :umask=
+	# TODO: I don't think windows has a umask equivalent?
+#	alias :umask :umask=
 
 	def pwd(path)
 		@cwd = path
@@ -343,10 +285,6 @@ class Win32
 	alias :chdir :pwd
 	alias :chdir= :cwd=
 	
-	def sid!
-		@sid = true
-		self
-	end
 	def pgroup(pid)
 		raise ArgumentError, "Invalid pgroup: #{pid}" if pid < 0 or !pid.is_a?(Integer)
 		@pgroup = pid.to_i
@@ -362,18 +300,7 @@ class Win32
 	alias :tty :ctty
 	
 
-	def rlimit(key, cur, max=nil)
-		key = if key.is_a? Integer
-			key.to_i
-		else # TODO: these const lookup should have better error handling
-			Process.const_get("RLIMIT_#{key.to_s.upcase}")
-		end
-		cur = ensure_rlimit(key, cur, 0)
-		max = ensure_rlimit(key, max, 1)
-		cur = max if cur > max
-		@rlimits[key] = [cur, max]
-		self
-	end
+	# TODO: I don't think windows has rlimit?
 	alias :setrlimit :rlimit
 	
 	def validate
@@ -407,20 +334,12 @@ class Win32
 	end
 
 	COMPLETE_VERSION = {
-		subspawn_posix: SubSpawn::POSIX::VERSION,
-		libfixposix: LFP::COMPLETE_VERSION,
+		subspawn_win32: SubSpawn::Win32::VERSION,
 	}
 
 	private
 	def none
 		@@none ||= Object.new
-	end
-	def ensure_rlimit(key, value, index)
-		if value.nil?
-			return Process.getrlimit(key)[index] # unspecified, load saved
-		end
-		return value.to_i if value.is_a? Integer
-		Process.const_get("RLIMIT_#{value.to_s.upcase}")
 	end
 
 	def make_envp
@@ -469,6 +388,19 @@ class Win32
 			end
 		end.join("")
 		%Q{"#{base}#{backslashes}#{backslashes}"} # A quote goes next, so double escape again
+	end
+	def handle_for(fdi)
+		fd = fd_number(@fd_map[fdi] || fdi)
+		hndl = W.get_osfhandle(fd)
+
+		if hndl == INVALID_HANDLE_VALUE || hndl == HANDLE_NEGATIVE_TWO
+			if @fd_map.nil?
+				hndl = W.GetStdHandle(W::STD_HANDLE[fdi])
+			else
+				raise SystemCallError.new("Invalid FD/handle for input fd #{fdi}", FFI.errno)
+			end
+		end
+		hndl
 	end
 	def ensure_file_string(path)
 		if defined? JRUBY_VERSION # accept File and Path java objects

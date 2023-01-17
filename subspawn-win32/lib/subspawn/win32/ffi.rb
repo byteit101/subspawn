@@ -8,7 +8,7 @@ module SubSpawn::Win32::FFI
 	# Common types
 
 	# uintptr or :pointer ?
-	typedef :uintptr_t, :hwnd
+	typedef :intptr_t, :shandle
 	typedef :uintptr_t, :handle
 
 	# TODO: I think this is corect?
@@ -99,12 +99,19 @@ module SubSpawn::Win32::FFI
 	attach_function :CloseHandle, [:handle], :bool
 	attach_function :WaitForSingleObject, [:handle, :dword], :dword
 	attach_function :CreateProcess, :CreateProcessW, %i{buffer_in buffer_inout pointer pointer bool dword buffer_in buffer_in pointer pointer}, :bool # TODO: specify the types, not just pointers?
+	attach_function :GetStdHandle, [:dword], :handle
 
+
+	ffi_lib FFI::Library::LIBC
+
+	attach_pfunc :get_osfhandle, :_get_osfhandle, [:int], :shandle
 
 	# Constants
 	# TODO: are these already somewhere?
 	
 	INFINITE = 0xFFFFFFFF
+	INVALID_HANDLE_VALUE = -1 # unsure if signed or unsigned is better
+	HANDLE_NEGATIVE_TWO = -2
 
 	# Process flags
 	DEBUG_PROCESS					= 0x00000001
@@ -125,6 +132,16 @@ module SubSpawn::Win32::FFI
 	CREATE_PRESERVE_CODE_AUTHZ_LEVEL= 0x02000000
 	CREATE_DEFAULT_ERROR_MODE		= 0x04000000
 	CREATE_NO_WINDOW				= 0x08000000
+
+	# TODO: fill this out
+	STARTF_USESTDHANDLES	= 0x0000010
+
+	# Also unsigned, but this is convienent, and ffi takes care of the rest
+	STD_HANDLE = {
+		0 => -10,
+		1 => -11,
+		2 => -12,
+	}
 	
 	# TODO: error reporting?
 	def self.free hwnd

@@ -5,7 +5,8 @@ if FFI::Platform.unix?
 	require 'subspawn/posix'
 	SubSpawn::Platform = SubSpawn::POSIX
 elsif FFI::Platform.windows?
-	raise "SubSpawn Win32 is not yet implemented"
+	require 'subspawn/win32'
+	SubSpawn::Platform = SubSpawn::Win32
 else
 	raise "Unknown FFI platform"
 end

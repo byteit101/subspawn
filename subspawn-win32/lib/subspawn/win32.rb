@@ -17,7 +17,6 @@ class Win32
 	end
 	using WinStr
 
-	OpenFD = Struct.new(:fd, :path, :mode, :flags)
 	
 	def initialize(command, *args, arg0: command)
 		@path = command
@@ -53,105 +52,22 @@ class Win32
 		end.to_h
 		@fd_keeps.each{|x| fd_check(x)}
 		@fd_closes.each{|x| fd_check(x)}
-		@fd_opens.each{|x|
-			fd_check(x.fd)
-			raise SpawnError, "Invalid FD open: Not a number: #{x.mode.inspect}" unless x.mode.is_a? Integer
-			raise SpawnError, "Invalid FD open: Not a flag: #{x.flags.inspect}" unless x.flags.is_a? Integer
-			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? x.path or Dir.exist?(File.dirname(x.path))
-		}
+
+		@path = @path.gsub("/", "\\")
+		@cwd = @cwd.gsub("/", "\\")
 		
 		raise SpawnError, "Invalid cwd path" unless @cwd.nil? or Dir.exist?(@cwd = ensure_file_string(@cwd))
+
+		argv_str = build_argstr
+		raise SpawnError, "Argument string is too long. #{argv_str.size} must be less than (1 << 15)" if argv_str.size >= (1 << 15)
 		
 		@ctty = @ctty.path if !@ctty.nil? and @ctty.is_a? File # PTY.open returns files
 		raise SpawnError, "Invalid controlling tty path" unless @ctty.nil? or File.exist?(@ctty = ensure_file_string(@ctty))
 		
 		true
 	end
-	
+
 	def spawn!
-		validate!
-		sfa = LFP::SpawnFileActions.new
-		sa = LFP::Spawnattr.new
-		raise "Spawn Init Error" if 0 != sfa.init
-		out_pid = nil
-		begin
-			raise "Spawn Init Error" if 0 != sa.init
-			begin
-				# set up file descriptors
-				
-				@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
-				@fd_opens.each {|opn|
-					sfa.addopen(fd_number(opn.fd), opn.path, opn.flags, opn.mode)
-				}
-				@fd_map.map{|k, v| [k, fd_number(v)] }.each do |dest, src|
-					sfa.adddup2(src, dest)
-				end
-				@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
-
-				unless @rlimits.empty?
-					# allocate output (pid)
-					FFI::MemoryPointer.new(LFP::Rlimit, @rlimits.length) do |rlimits|
-						# build array
-						@rlimits.each_with_index {|(key, (cur, max)), i|
-							rlimit = LFP::Rlimit.new(rlimits[i])
-							#puts "building rlim at #{i} to #{[cur, max, key]}"
-							rlimit[:rlim_cur] = cur.to_i
-							rlimit[:rlim_max] = max.to_i
-							rlimit[:resource] = key.to_i
-						}
-						sa.setrlimit(rlimits, @rlimits.length)
-					end
-				end
-				
-				# set up signals
-				sa.sigmask = @signal_mask.to_ptr if @signal_mask
-				sa.sigdefault = @signal_default.to_ptr if @signal_default
-				
-				# set up ownership and groups
-				sa.pgroup = @pgroup.to_i if @pgroup
-				sa.umask = @umask.to_i if @umask
-				
-				# Set up terminal control
-				sa.setsid if @sid
-				sa.ctty = @ctty if @ctty
-				
-				# set up working dir
-				sa.cwd = @cwd if @cwd
-				
-				# allocate output (pid)
-				FFI::MemoryPointer.new(:int, 1) do |pid|
-					argv_str = @argv.map{|a|
-						raise ArgumentError, "Nulls not allowed in command: #{a.inspect}" if a.include? "\0"
-						FFI::MemoryPointer.from_string a
-					} + [nil] # null end of argv
-					FFI::MemoryPointer.new(:pointer, argv_str.length) do |argv_holder|
-					
-						# ARGV
-						argv_holder.write_array_of_pointer argv_str
-						
-						# ARGP/ENV
-						make_envp do |envp_holder|
-
-							# Launch!
-							ret = LFP.spawnp(pid, @path, argv_holder, envp_holder, sfa, sa)
-							if ret != 0
-								raise SystemCallError.new("Spawn Error: #{ret}", LFP.errno)
-							end
-							out_pid = pid.read_int
-						end
-					end
-				end
-			ensure
-				sa.destroy
-			end
-		ensure
-			sfa.destroy
-		end
-		out_pid
-	end
-
-
-	def spawn_w32!
 		validate!
 		startupinfo = W::StartupInfo.new # ffi gem zeros memory for us
 		proc_info = W::ProcInfo.new
@@ -313,6 +229,7 @@ class Win32
 	# usage:
 	# SubSpawn::POSIX.each_which("ls", ENV) {|path| ...}
 	# SubSpawn::POSIX.each_which("ls", ENV).to_a
+	# TODO: fix this!
 	def self.expand_which(name, env=ENV)
 		return self.to_enum(:expand_which, name, env) unless block_given?
 		# only allow relative paths if they traverse, and if they traverse, only allow relative paths

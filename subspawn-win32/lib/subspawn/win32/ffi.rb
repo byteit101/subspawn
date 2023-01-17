@@ -80,6 +80,19 @@ module SubSpawn::Win32::FFI
 			self[:cb] = self.class.size
 		end
 	end
+
+	class SecurityAttributes < FFI::Struct
+		include MMHelper
+		# _SECURITY_ATTRIBUTES
+		layout :nLength, :dword,
+			:lpSecurityDescriptor, :pointer,
+			:bInheritHandle, :bool
+
+		def initialize()
+			super
+			self[:nLength] = self.class.size
+		end
+	end
   
 	ffi_lib :kernel32
   
@@ -92,6 +105,26 @@ module SubSpawn::Win32::FFI
 	# TODO: are these already somewhere?
 	
 	INFINITE = 0xFFFFFFFF
+
+	# Process flags
+	DEBUG_PROCESS					= 0x00000001
+	DEBUG_ONLY_THIS_PROCESS			= 0x00000002
+	CREATE_SUSPENDED				= 0x00000004
+	DETACHED_PROCESS				= 0x00000008
+	CREATE_NEW_CONSOLE				= 0x00000010
+	NORMAL_PRIORITY_CLASS			= 0x00000020 # TODO: where is this listed on MSDN?
+	CREATE_NEW_PROCESS_GROUP		= 0x00000200
+	CREATE_UNICODE_ENVIRONMENT		= 0x00000400
+	CREATE_SEPARATE_WOW_VDM			= 0x00000800
+	CREATE_SHARED_WOW_VDM			= 0x00001000
+	INHERIT_PARENT_AFFINITY			= 0x00010000
+	CREATE_PROTECTED_PROCESS		= 0x00040000
+	EXTENDED_STARTUPINFO_PRESENT	= 0x00080000
+	CREATE_SECURE_PROCESS			= 0x00400000
+	CREATE_BREAKAWAY_FROM_JOB		= 0x01000000
+	CREATE_PRESERVE_CODE_AUTHZ_LEVEL= 0x02000000
+	CREATE_DEFAULT_ERROR_MODE		= 0x04000000
+	CREATE_NO_WINDOW				= 0x08000000
 	
 	# TODO: error reporting?
 	def self.free hwnd

@@ -10,6 +10,7 @@ module SubSpawn::Win32::FFI
 	# uintptr or :pointer ?
 	typedef :intptr_t, :shandle
 	typedef :uintptr_t, :handle
+	typedef :int, :hresult
 
 	# TODO: I think this is corect?
 	typedef :uint, :dword
@@ -93,6 +94,28 @@ module SubSpawn::Win32::FFI
 			self[:nLength] = self.class.size
 		end
 	end
+
+	class Coord < FFI::Struct
+		include MMHelper
+		# _COORD
+		layout :x, :short,
+			:y, :short
+
+		def initialize(x=0,y=0)
+			super
+			self[:x] = x
+			self[:y] = y
+		end
+		def to_a
+			[x, y]
+		end
+		def to_ary
+			[x, y]
+		end
+		def self.[](*keys)
+			self.new(*keys.flatten)
+		end
+	end
   
 	ffi_lib :kernel32
   
@@ -100,6 +123,11 @@ module SubSpawn::Win32::FFI
 	attach_function :WaitForSingleObject, [:handle, :dword], :dword
 	attach_function :CreateProcess, :CreateProcessW, %i{buffer_in buffer_inout pointer pointer bool dword buffer_in buffer_in pointer pointer}, :bool # TODO: specify the types, not just pointers?
 	attach_function :GetStdHandle, [:dword], :handle
+
+	# PTY
+	# HPCON == handle
+	attach_function :CloseHandle, [:handle], :void
+	attach_function :CreatePseudoConsole, %i{buffer_in handle handle dword buffer_out}, :void
 
 
 	ffi_lib FFI::Library::LIBC
@@ -142,6 +170,9 @@ module SubSpawn::Win32::FFI
 		1 => -11,
 		2 => -12,
 	}
+
+	#PTY
+	PSEUDOCONSOLE_INHERIT_CURSOR = 1
 	
 	# TODO: error reporting?
 	def self.free hwnd

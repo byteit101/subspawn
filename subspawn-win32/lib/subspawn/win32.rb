@@ -3,6 +3,8 @@ module SubSpawn
 class SpawnError < RuntimeError
 end
 class Win32
+	W = SubSpawn::Win32::FFI
+
 	module WinStr
 		refine Object do
 			def to_wstr

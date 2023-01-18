@@ -63,8 +63,7 @@ class Win32
 		argv_str = build_argstr
 		raise SpawnError, "Argument string is too long. #{argv_str.size} must be less than (1 << 15)" if argv_str.size >= (1 << 15)
 		
-		@ctty = @ctty.path if !@ctty.nil? and @ctty.is_a? File # PTY.open returns files
-		raise SpawnError, "Invalid controlling tty path" unless @ctty.nil? or File.exist?(@ctty = ensure_file_string(@ctty))
+		raise SpawnError, "Invalid controlling tty" unless @ctty.nil? or @ctty.respond_to? :con_pty
 		
 		true
 	end
@@ -89,12 +88,8 @@ class Win32
 		
 		# set up ownership and groups
 		sa.pgroup = @pgroup.to_i if @pgroup
-		#sa.umask = @umask.to_i if @umask
 		
-		# Set up terminal control
-		#sa.setsid if @sid
-		#TODO: PTY!
-		#sa.ctty = @ctty if @ctty
+
 
 		# TODO: allow configuring inherit handles. CRuby force this to true, so we will copy that for now
 		hndl_inheritance = true
@@ -109,33 +104,64 @@ class Win32
 		argv_str = build_argstr
 		# TODO: move this validation to validate!
 		raise SpawnError, "Argument string is too long. #{argv_str.size} must be less than (1 << 15)" if argv_str.size >= (1 << 15)
-		
-		# ARGP/ENV
-		make_envp do |envp_holder|
 
-			# Launch!
-			# Note that @path can be null on windows, but we will always enforce otherwise
-			ret = W.CreateProcess(
-				@path.to_wstr, # DONE
-				argv_str,  #DONE
-				sa, # proc_sec, DONE, but unexposed
-				sa, # thread_sec, DONE, but unexposed
-				hndl_inheritance, # DONE, but unexposed
-				flags, # DONE, but unexposed
-				envp_holder, # DONE
-				@cwd.to_wstr, # DONE
-				startupinfo,
-				proc_info # DONE
-			)
-			if !ret
-				# TODO: CRuby does map_errno(GetLastError()) Do we need to do that for does FFI.errno do that already?
-				raise SystemCallError.new("Spawn Error: CreateProcess", FFI.errno)
+		# Add extra attributes (pty)
+		numAttribs = 0
+		numAttribs +=1 if @ctty != nil
+
+		FFI::MemoryPointer.new(:size_t, 1) do |sizeref|
+			if numAttribs == 0
+				sizeref.write(:size_t, 5)
+			else
+				W::InitializeProcThreadAttributeList(nil, numAttribs, 0, sizeref)
 			end
-			W.CloseHandle(proc_info.hProcess)
-			W.CloseHandle(proc_info.hThread)
-			# being a spawn clone, we don't normally expose the thread, but assign it if anyone wants it
-			@out_thread = proc_info.dwThreadId
-			out_pid = proc_info.dwProcessId
+			FFI::MemoryPointer.new(:uint8_t, sizeref.read(:size_t)) do |attribList|
+
+				if numAttribs > 0 && !W::InitializeProcThreadAttributeList(attribList, numAttribs,0, sizeref)
+					raise SpawnError, "Couldn't initialize attribute list"
+				end
+				startupinfo.lpAttributeList = nil
+				if numAttribs > 0
+					flags |= W::EXTENDED_STARTUPINFO_PRESENT
+					startupinfo.lpAttributeList = attribList
+				end
+				unless @ctty.nil?
+					if !W::UpdateProcThreadAttribute(attribList, 0, W.vPROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, @ctty.con_pty.get_handle, W::SIZEOF_HPCON, nil, nil)
+						raise SpawnError, "Couldn't add pty to list"
+					end
+				end
+				# ARGP/ENV
+				make_envp do |envp_holder|
+
+					# Launch!
+					# Note that @path can be null on windows, but we will always enforce otherwise
+					ret = W.CreateProcess(
+						@path.to_wstr, # DONE
+						argv_str,  #DONE
+						sa, # proc_sec, DONE, but unexposed
+						sa, # thread_sec, DONE, but unexposed
+						hndl_inheritance, # DONE, but unexposed
+						flags, # DONE, but unexposed
+						envp_holder, # DONE
+						@cwd.to_wstr, # DONE
+						startupinfo,
+						proc_info # DONE
+					)
+					if !ret
+						# TODO: CRuby does map_errno(GetLastError()) Do we need to do that for does FFI.errno do that already?
+						raise SystemCallError.new("Spawn Error: CreateProcess", FFI.errno)
+					end
+					W.CloseHandle(proc_info.hProcess)
+					W.CloseHandle(proc_info.hThread)
+					# being a spawn clone, we don't normally expose the thread, but assign it if anyone wants it
+					@out_thread = proc_info.dwThreadId
+					out_pid = proc_info.dwProcessId
+				end
+
+				if numAttribs > 0
+					W::DeleteProcThreadAttributeList(attribList)
+				end
+			end
 		end
 		out_pid
 	end
@@ -249,7 +275,7 @@ class Win32
 		# we could do that too, and there are 2 tests about that in rubyspec
 		# but we shall ignore them for now
 		# TODO: implement that
-		["sh", "-c", string.to_str]
+		["cmd.exe", "/c", string.to_str]
 	end
 
 	COMPLETE_VERSION = {

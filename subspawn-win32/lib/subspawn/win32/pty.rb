@@ -8,28 +8,171 @@ class Win32
 module PtyHelper
 
 	W = SubSpawn::Win32::FFI
-	class PtyIO < IO
+	class MasterPtyIO < BidiMergedIO
+		def initialize(read, write, pty)
+			super(read, write)
+			read.sync = true
+			write.sync = true
+			@con_pty = pty
+		end
+
 		def inspect
-			"#<IO:masterpty:#{@slave_path}>"
+			"#<masterpty:#{@con_pty}>"
+		end
+
+		def winsize
+			@conpty.winsize
+		end
+
+		def winsize= arg
+			@conpty.winsize = arg
 		end
 
 		# Subspawn-specific feature
-		attr_reader :slave_path
+		attr_reader :con_pty
+	end
+	class SlavePtyIO < BidiMergedIO
+		def initialize(read, write, pty)
+			super(read, write)
+			read.sync = true
+			write.sync = true
+			@con_pty = pty
+		end
 
-		private
-		def __subspawn_init(name)
-			# All other files are opened cloexec, this one isn't yet as it came from native code
-			self.close_on_exec = true
-			@slave_path = name.freeze
-			self.sync = true
+		def winsize
+			@conpty.winsize
+		end
+
+		def winsize= arg
+			@conpty.winsize = arg
+		end
+		def tty?
+			true
+		end
+		def isatty
+			true
+		end
+
+		def inspect
+			"#<pty:#{@con_pty}>"
+		end
+
+		# Subspawn-specific feature
+		attr_reader :con_pty
+	end
+
+	# combines two Unidirectional IO's into one "single" bidirectional IO
+	class BidiMergedIO # < IO
+		def initialize(read, write)
+			@read, @write = read, write
+		end
+
+		READS = %i{
+			autoclose?
+			binmode?
+			bytes
+			chars
+			close_read
+			codepoints
+			each
+			each_byte
+			each_char
+			each_codepoint
+			each_line
+			eof?
+			eof
+			external_encoding
+			fdatasync
+			getbyte
+			getc
+			gets
+			internal_encoding
+			lineno
+			lines
+			pos
+			pread
+			read
+			read_nonblock
+			readbyte
+			readchar
+			readline
+			readpartial
+			rewind
+			seek
+			stat
+			sysread
+
+			autoclose=
+			binmode=
+			close_on_exec=
+			close
+			flush
+			fsync
+			set_encoding
+		}
+		WRITES = %i{
+			<<
+			close_write
+			print
+			printf
+			putc
+			puts
+			pwrite
+			syswrite
+			write
+			write_nonblock
+			
+			autoclose=
+			binmode=
+			close_on_exec=
+			close
+			flush
+			fsync
+			set_encoding
+		}
+
+		(READS + WRITES).uniq.each do |meth|
+			if READS.include? meth
+				if WRITES.include? meth # both
+					define_method(meth) do |*args|
+						@read.send(meth, *args)
+						@write.send(meth, *args)
+					end
+				else # read only
+					define_method(meth) do |*args|
+						@read.send(meth, *args)
+					end
+				end
+			else # write only
+				define_method(meth) do |*args|
+					@write.send(meth, *args)
+				end
+			end
 		end
 	end
 
 	class ConPTYHelper
-		def initialize(hpc, pipes)
+		def initialize(hpc, pipes, size)
 			@hpc = hpc
 			@close = true
 			@pipes = pipes
+			@lastsize = size
+		end
+		def winsize
+			@lastsize
+		end
+		def winsize=(size)
+			if W::ResizePseudoConsole(@hpc, W::Coord[size]) < 0
+				raise "ConPTY Resize failure"
+			else
+				@lastsize = size
+			end
+		end
+		def con_pty
+			self
+		end
+		def raw_handle
+			@hpc
 		end
 		def no_gc!
 			@close=false
@@ -53,6 +196,7 @@ module PtyHelper
 			end
 		end
 	end
+	using IoHelper
 
 	def self.open_internal(chmod_for_open = false, initial_size: [40,80], flags: 0)
 		# TODO: does windows care about permissions? I'm going to assume no for now
@@ -69,27 +213,25 @@ module PtyHelper
 			hpc = ptyref.read(:uintptr_t)
 		end
 
-		master = PtyIO.for_fd(m, IO::RDWR | IO::SYNC)
-		master.send(:__subspawn_init, name)
+		pty = ConPTYHelper.new(hpc, [child_r, child_w, us_r, us_w], initial_size.flatten)
+		master = MasterPtyIO.new(us_r, us_w, pty)
 
-		# we could shim the slave to be a fake file, or we could just re-open the path
-		# which fixes #inspect, #tty?, #path, and #close_on_exec, all in one go
-		# https://bugs.ruby-lang.org/issues/19036
-		slave = File.open(name, IO::RDWR | IO::SYNC)
-		
-		child_r.close
-		child_w.close
+		slave = SlavePtyIO.new(child_r, child_w, pty)
 
-		[master, slave, name]
+		#child_r.close
+		#child_w.close
+
+		[master, slave, pty]
 	end
 
 	def self.open
-		*files, name = open_internal(true)
+		*files, pty = open_internal(true)
 		return files unless block_given?
 
 		begin
 			return yield files.dup # Array, not splatted
 		ensure
+			pty.close
 			files.reject(&:closed?).each(&:close)
 		end
 	end

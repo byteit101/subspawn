@@ -56,7 +56,7 @@ module SubSpawn::Win32::FFI
 	   
 	class StartupInfo < FFI::Struct
 		include MMHelper
-	   #_STARTUPINFOW
+	   #_STARTUPINFOEXW
 	   layout  :cb, :dword,
 		:lpReserved, :pointer,
 		:lpDesktop, :pointer,
@@ -74,7 +74,8 @@ module SubSpawn::Win32::FFI
 		:lpReserved2, :uint8_t,
 		:hStdInput, :handle,
 		:hStdOutput, :handle,
-		:hStdError, :handle
+		:hStdError, :handle,
+		:lpAttributeList, :pointer
 
 		def initialize()
 			super
@@ -124,10 +125,17 @@ module SubSpawn::Win32::FFI
 	attach_function :CreateProcess, :CreateProcessW, %i{buffer_in buffer_inout pointer pointer bool dword buffer_in buffer_in pointer pointer}, :bool # TODO: specify the types, not just pointers?
 	attach_function :GetStdHandle, [:dword], :handle
 
+	attach_function :InitializeProcThreadAttributeList, %i{buffer_out dword dword buffer_inout}, :bool
+
+	# the first handle should really be a pointer, but we use it as a pointer
+	attach_function :UpdateProcThreadAttribute, %i{buffer_inout dword pointer pointer size_t pointer pointer}, :bool
+	attach_function :DeleteProcThreadAttributeList, [:buffer_inout], :void
+	
 	# PTY
 	# HPCON == handle
-	attach_function :CloseHandle, [:handle], :void
-	attach_function :CreatePseudoConsole, %i{buffer_in handle handle dword buffer_out}, :void
+	attach_function :ClosePseudoConsole, [:handle], :void
+	attach_function :ResizePseudoConsole, [:handle, :pointer], :int
+	attach_function :CreatePseudoConsole, %i{buffer_in handle handle dword buffer_out}, :int
 
 
 	ffi_lib FFI::Library::LIBC
@@ -136,6 +144,8 @@ module SubSpawn::Win32::FFI
 
 	# Constants
 	# TODO: are these already somewhere?
+
+	SIZEOF_HPCON = FFI::Pointer::SIZE
 	
 	INFINITE = 0xFFFFFFFF
 	INVALID_HANDLE_VALUE = -1 # unsure if signed or unsigned is better
@@ -163,6 +173,7 @@ module SubSpawn::Win32::FFI
 
 	# TODO: fill this out
 	STARTF_USESTDHANDLES	= 0x0000010
+	attach_variable :vPROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, :pointer
 
 	# Also unsigned, but this is convienent, and ffi takes care of the rest
 	STD_HANDLE = {

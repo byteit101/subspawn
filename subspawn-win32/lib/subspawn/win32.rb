@@ -1,3 +1,4 @@
+require 'subspawn/win32/version'
 require 'subspawn/win32/ffi'
 module SubSpawn
 class SpawnError < RuntimeError
@@ -8,11 +9,17 @@ class Win32
 	module WinStr
 		refine Object do
 			def to_wstr
-				"#{str.to_str}\0".encode("UTF-16LE")
+				"#{self.to_str}\0".encode("UTF-16LE")
+			end
+			def to_wstrp
+				::FFI::MemoryPointer.from_string(to_wstr)
 			end
 		end
 		refine NilClass do
 			def to_wstr
+				nil
+			end
+			def to_wstrp
 				nil
 			end
 		end
@@ -28,15 +35,20 @@ class Win32
 		@fd_map = {}
 		@fd_keeps = []
 		@fd_closes = []
-		@fd_opens = []
-		@signal_mask = @signal_default = nil
 		@cwd = nil
-		@sid = false
 		@pgroup = nil
 		@env = :default
 		@ctty = nil
-		@rlimits = {}
-		@umask = nil
+
+		@win = {
+			reqflags: 0,
+			flags: 0,
+			title: nil,
+			desktop: nil,
+			show: 0,
+			confil: 0,
+		}
+
 	end
 	attr_writer :cwd, :ctty
 	
@@ -56,7 +68,7 @@ class Win32
 		@fd_closes.each{|x| fd_check(x)}
 
 		@path = @path.gsub("/", "\\")
-		@cwd = @cwd.gsub("/", "\\")
+		@cwd = @cwd.gsub("/", "\\") unless @cwd.nil?
 		
 		raise SpawnError, "Invalid cwd path" unless @cwd.nil? or Dir.exist?(@cwd = ensure_file_string(@cwd))
 
@@ -79,17 +91,29 @@ class Win32
 		#@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
 		#@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
 
-		startupinfo.dwFlags = W::STARTF_USESTDHANDLES
+		# startup info
+		use_stdio = 0 #| W::STARTF_USESTDHANDLES
+		startupinfo.dwFlags = use_stdio | @win[:reqflags] | @win[:flags]
+		if use_stdio != 0
 		startupinfo.hStdInput = handle_for(0)
 		startupinfo.hStdOutput = handle_for(1)
 		startupinfo.hStdError = handle_for(2)
+		end
+		cap1 = startupinfo.lpDesktop = @win[:desktop].to_wstrp if @win[:desktop]
+		cap2 = startupinfo.lpTitle = @win[:title].to_wstrp if @win[:title]
+		startupinfo.wShowWindow = @win[:show] if @win[:show]
+		startupinfo.dwFillAttribute = @win[:confill] if @win[:confill]
+		if @win[:consize]
+			startupinfo.dwXCountChars, startupinfo.dwYCountChars = *@win[:consize]
+		end
+		if @win[:winsize]
+			startupinfo.dwXSize, startupinfo.dwYSize = *@win[:winsize]
+		end
+		if @win[:winpos]
+			startupinfo.dwX, startupinfo.dwY = *@win[:winpos]
+		end
 
 		# TODO: does windows have rlimits?
-		
-		# set up ownership and groups
-		sa.pgroup = @pgroup.to_i if @pgroup
-		
-
 
 		# TODO: allow configuring inherit handles. CRuby force this to true, so we will copy that for now
 		hndl_inheritance = true
@@ -97,8 +121,11 @@ class Win32
 		sa.bInheritHandle = hndl_inheritance
 		
 		flags = 0
-		flags |= W::CREATE_UNICODE_ENVIRONMENT # ENVP
+		flags |= W::CREATE_UNICODE_ENVIRONMENT if @env != :default # ENVP
 		flags |= W::NORMAL_PRIORITY_CLASS # TODO: allow configuring priority
+		flags |= W::CREATE_NEW_PROCESS_GROUP if @pgroup
+
+
 
 		# ARGV
 		argv_str = build_argstr
@@ -109,13 +136,13 @@ class Win32
 		numAttribs = 0
 		numAttribs +=1 if @ctty != nil
 
-		FFI::MemoryPointer.new(:size_t, 1) do |sizeref|
+		::FFI::MemoryPointer.new(:size_t, 1) do |sizeref|
 			if numAttribs == 0
 				sizeref.write(:size_t, 5)
 			else
 				W::InitializeProcThreadAttributeList(nil, numAttribs, 0, sizeref)
 			end
-			FFI::MemoryPointer.new(:uint8_t, sizeref.read(:size_t)) do |attribList|
+			::FFI::MemoryPointer.new(:uint8_t, sizeref.read(:size_t)) do |attribList|
 
 				if numAttribs > 0 && !W::InitializeProcThreadAttributeList(attribList, numAttribs,0, sizeref)
 					raise SpawnError, "Couldn't initialize attribute list"
@@ -126,12 +153,12 @@ class Win32
 					startupinfo.lpAttributeList = attribList
 				end
 				unless @ctty.nil?
-					if !W::UpdateProcThreadAttribute(attribList, 0, W.vPROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, @ctty.con_pty.get_handle, W::SIZEOF_HPCON, nil, nil)
+					if !W::UpdateProcThreadAttribute(attribList, 0, W::PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, @ctty.con_pty.raw_handle, W::SIZEOF_HPCON, nil, nil)
 						raise SpawnError, "Couldn't add pty to list"
 					end
 				end
 				# ARGP/ENV
-				make_envp do |envp_holder|
+				envp_holder = make_envp
 
 					# Launch!
 					# Note that @path can be null on windows, but we will always enforce otherwise
@@ -156,7 +183,6 @@ class Win32
 					# being a spawn clone, we don't normally expose the thread, but assign it if anyone wants it
 					@out_thread = proc_info.dwThreadId
 					out_pid = proc_info.dwProcessId
-				end
 
 				if numAttribs > 0
 					W::DeleteProcThreadAttributeList(attribList)
@@ -169,12 +195,8 @@ class Win32
 	# TODO: allow io on left?
 	def fd(number, io_or_fd)
 		num = number.is_a?(Symbol) ? Std[number] : number.to_i
-		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
-		if fd_number(io_or_fd) == num
-			fd_keep(io_or_fd)
-		else
-			@fd_map[num] = io_or_fd
-		end
+		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0, 1, 2" unless [0,1,2].include? num
+		@fd_map[num] = io_or_fd
 		self
 	end
 
@@ -217,6 +239,44 @@ class Win32
 		self
 	end
 
+	def desktop(str)
+		@win[:desktop] = str
+		self
+	end
+	def title(str)
+		@win[:title] = str
+		self
+	end
+	def show_window(show) # TODO: translate ruby to flags
+		@win[:show] = show
+		@win[:reqflags] |= W::STARTF_USESHOWWINDOW
+		self
+	end
+	def window_pos(x,y)
+		@win[:winpos] = [x,y]
+		@win[:reqflags] |= W::STARTF_USEPOSITION
+		self
+	end
+	def window_size(w,h)
+		@win[:winsize] = [w,h]
+		@win[:reqflags] |= W::STARTF_USESIZE
+		self
+	end
+	def console_size(x,y)
+		@win[:conpos] = [x,y]
+		@win[:reqflags] |= W::STARTF_USECOUNTCHARS
+		self
+	end
+	def window_fill(attrib)
+		@win[:confill] = attrib
+		@win[:reqflags] |= W::STARTF_USEFILLATTRIBUTE
+		self
+	end
+	def start_flags(flags)
+		@win[:flags] = flags
+		self
+	end
+
 	# TODO: I don't think windows has a umask equivalent?
 #	alias :umask :umask=
 
@@ -229,9 +289,9 @@ class Win32
 	alias :chdir :pwd
 	alias :chdir= :cwd=
 	
-	def pgroup(pid)
-		raise ArgumentError, "Invalid pgroup: #{pid}" if pid < 0 or !pid.is_a?(Integer)
-		@pgroup = pid.to_i
+	def pgroup(isnew)
+		raise ArgumentError, "Invalid new_pgroup: #{isnew} (expecting boolean)" unless [true, false, nil, 0].include? isnew
+		@pgroup = !!isnew
 		self
 	end
 	alias :pgroup= :pgroup
@@ -243,9 +303,6 @@ class Win32
 	alias :tty= :ctty=
 	alias :tty :ctty
 	
-
-	# TODO: I don't think windows has rlimit?
-	alias :setrlimit :rlimit
 	
 	def validate
 		validate! rescue false
@@ -255,17 +312,27 @@ class Win32
 
 	# generator for candidates for an executable name
 	# usage:
-	# SubSpawn::POSIX.each_which("ls", ENV) {|path| ...}
-	# SubSpawn::POSIX.each_which("ls", ENV).to_a
+	# SubSpawn::Win32.each_which("ls", ENV) {|path| ...}
+	# SubSpawn::Win32.each_which("ls", ENV).to_a
 	# TODO: fix this!
 	def self.expand_which(name, env=ENV)
+		name = name.gsub("/","\\") # windows-ify the name
 		return self.to_enum(:expand_which, name, env) unless block_given?
+		extensions = ["", *(ENV['PATHEXT'] || "").split(';')]
 		# only allow relative paths if they traverse, and if they traverse, only allow relative paths
 		if name.include? "/"
-			yield File.absolute_path(name)
+			extensions.each do |ext|
+				yield File.absolute_path(name + ext)
+			end
 		else
+			# If we were to follow
+			# https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+			# in the path search process, we should look in CWD and dirname($0) first,
+			# and possibly the app paths registry key. Ignore for now
 			env['PATH'].split(File::PATH_SEPARATOR).each do |path|
-				yield File.join(path, name)
+				extensions.each do |ext|
+					yield File.join(path, name+ext)
+				end
 			end
 		end
 	end
@@ -275,7 +342,9 @@ class Win32
 		# we could do that too, and there are 2 tests about that in rubyspec
 		# but we shall ignore them for now
 		# TODO: implement that
-		["cmd.exe", "/c", string.to_str]
+		# https://learn.microsoft.com/en-us/archive/blogs/twistylittlepassagesallalike/everyone-quotes-command-line-arguments-the-wrong-way
+		# I think this should work, maybe?
+		["cmd.exe", "/c", string.to_str.gsub(/[)(%!^"><&|)]/, "^\\1")]
 	end
 
 	COMPLETE_VERSION = {
@@ -289,7 +358,7 @@ class Win32
 
 	def make_envp
 		if @env == :default
-			yield nil # weirdly easy on windows
+			return nil # weirdly easy on windows
 		else
 			strings = @env.select{|k, v|
 				!k.nil? and !v.nil?
@@ -300,7 +369,7 @@ class Win32
 				raise ArgumentError, "Variable key cannot include '=': #{str.inspect}" if k.include? "=" # By Spec
 				"#{str}\0"
 			} + "\0" # null end of argp
-			yield strings.to_wstr
+			return strings.to_wstr
 		end
 	end
 	def build_argstr
@@ -338,7 +407,7 @@ class Win32
 		fd = fd_number(@fd_map[fdi] || fdi)
 		hndl = W.get_osfhandle(fd)
 
-		if hndl == INVALID_HANDLE_VALUE || hndl == HANDLE_NEGATIVE_TWO
+		if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
 			if @fd_map.nil?
 				hndl = W.GetStdHandle(W::STD_HANDLE[fdi])
 			else
@@ -382,6 +451,3 @@ class Win32
 
 end
 end
-
-
-

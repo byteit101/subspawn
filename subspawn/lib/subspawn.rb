@@ -108,7 +108,11 @@ module SubSpawn
 					#base.sid!# TODO: yes? no?
 				end
 			when :sid
-				base.sid! if value
+				if base.respond_to? :sid!
+					base.sid! if value
+				else
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'sid'"
+				end
 			when :env
 				if env_opts[:deltas]
 					warn "Provided multiple ENV options"
@@ -128,19 +132,44 @@ module SubSpawn
 				raise TypeError, "pgroup must be boolean or integral" if value.is_a? Symbol
 				base.pgroup = value == true ? 0 : value if value
 			when :signal_mask # TODO: signal_default
-				base.signal_mask(value)
+				if base.respond_to? :signal_mask
+					base.signal_mask(value)
+				else
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'signal_mask'"
+				end
 			when /rlimit_(.*)/ # P.s
+				unless base.respond_to? :rlimit
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'rlimit_*'"
+				else	
+					name = $1
+					keys = [value].flatten
+					base.rlimit(name, *keys)
+				end
+			when /w32_(.*)/ # NEW
 				name = $1
-				keys = [value].flatten
-				base.rlimit(name, *keys)
+				raise ArgumentError, "Unknown win32 argument: #{name}" unless %w{desktop title show_window window_pos window_size console_size window_fill start_flags}.include? name
+				unless base.respond_to? :name
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'w32_#{$1}'"
+				else	
+					base.send(name, *value)
+				end
 			when :rlimit # NEW?
 				raise ArgumentError, "rlimit as a hash must be a hash" unless value.respond_to? :to_h
-				value.to_h.each do |key, values|
-					base.rlimit(key, *[values].flatten)
+
+				unless base.respond_to? :rlimit
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'rlimit_*'"
+				else
+					value.to_h.each do |key, values|
+						base.rlimit(key, *[values].flatten)
+					end
 				end
 			when :umask # P.s
 				raise ArgumentError, "umask must be numeric" unless value.is_a? Integer
-				base.umask = value
+				unless base.respond_to? :umask
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'umask'"
+				else
+					base.umask = value
+				end
 			when :unsetenv_others # P.s
 				env_opts[:only] = !!value
 				env_opts[:set] ||= !!value

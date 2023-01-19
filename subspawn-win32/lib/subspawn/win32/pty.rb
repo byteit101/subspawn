@@ -1,65 +1,13 @@
 # frozen_string_literal: true
 
 require 'ffi'
-require 'subspawn/win32/ffi'
+require 'subspawn/win32'
 
 module SubSpawn
 class Win32
 module PtyHelper
 
 	W = SubSpawn::Win32::FFI
-	class MasterPtyIO < BidiMergedIO
-		def initialize(read, write, pty)
-			super(read, write)
-			read.sync = true
-			write.sync = true
-			@con_pty = pty
-		end
-
-		def inspect
-			"#<masterpty:#{@con_pty}>"
-		end
-
-		def winsize
-			@conpty.winsize
-		end
-
-		def winsize= arg
-			@conpty.winsize = arg
-		end
-
-		# Subspawn-specific feature
-		attr_reader :con_pty
-	end
-	class SlavePtyIO < BidiMergedIO
-		def initialize(read, write, pty)
-			super(read, write)
-			read.sync = true
-			write.sync = true
-			@con_pty = pty
-		end
-
-		def winsize
-			@conpty.winsize
-		end
-
-		def winsize= arg
-			@conpty.winsize = arg
-		end
-		def tty?
-			true
-		end
-		def isatty
-			true
-		end
-
-		def inspect
-			"#<pty:#{@con_pty}>"
-		end
-
-		# Subspawn-specific feature
-		attr_reader :con_pty
-	end
 
 	# combines two Unidirectional IO's into one "single" bidirectional IO
 	class BidiMergedIO # < IO
@@ -149,8 +97,69 @@ module PtyHelper
 				end
 			end
 		end
+
+		def underlying_read_io
+			@read
+		end
+		def underlying_write_io
+			@write
+		end
 	end
 
+	class MasterPtyIO < BidiMergedIO
+		def initialize(read, write, pty)
+			super(read, write)
+			read.sync = true
+			write.sync = true
+			@con_pty = pty
+		end
+
+		def inspect
+			"#<masterpty:#{@con_pty}>"
+		end
+
+		def winsize
+			@conpty.winsize
+		end
+
+		def winsize= arg
+			@conpty.winsize = arg
+		end
+
+		# Subspawn-specific feature
+		attr_reader :con_pty
+	end
+	class SlavePtyIO < BidiMergedIO
+		def initialize(read, write, pty)
+			super(read, write)
+			read.sync = true
+			write.sync = true
+			@con_pty = pty
+		end
+
+		def winsize
+			@conpty.winsize
+		end
+
+		def winsize= arg
+			@conpty.winsize = arg
+		end
+		def tty?
+			true
+		end
+		def isatty
+			true
+		end
+
+		def inspect
+			"#<winpty:#{@con_pty}>"
+		end
+
+		# Subspawn-specific feature
+		attr_reader :con_pty
+	end
+
+	# TODO: ensure all handles/resources are cleaned up properly
 	class ConPTYHelper
 		def initialize(hpc, pipes, size)
 			@hpc = hpc
@@ -189,7 +198,7 @@ module PtyHelper
 			def to_hndl
 				hndl = W.get_osfhandle(self.fileno)
 
-				if hndl == INVALID_HANDLE_VALUE || hndl == HANDLE_NEGATIVE_TWO
+				if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
 					raise SystemCallError.new("Invalid FD/handle for input fd #{self}", FFI.errno)
 				end
 				hndl
@@ -205,7 +214,7 @@ module PtyHelper
 		us_r, child_w = IO.pipe
 		size = W::Coord[initial_size]
 		hpc = nil
-		FFI::MemoryPointer.new(:uintptr_t, 1) do |ptyref|
+		::FFI::MemoryPointer.new(:uintptr_t, 1) do |ptyref|
 			hr = W::CreatePseudoConsole(size, child_r.to_hndl, child_w.to_hndl, flags, ptyref)
 			if hr < 0 # failure
 				raise "ConPTY failure: #{hr}"

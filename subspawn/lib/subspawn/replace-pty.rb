@@ -2,6 +2,10 @@ require 'subspawn'
 
 $_ss_overwrite = defined? PTY
 
+if FFI::Platform.windows? && !$_ss_overwrite
+	require 'subspawn/win32/pty'
+end
+
 module PTY
 	unless $_ss_overwrite
 		class ChildExited < RuntimeError

@@ -1,5 +1,4 @@
 require 'ffi'
-
 module SubSpawn::Win32::FFI
 	extend FFI::Library
 
@@ -103,7 +102,7 @@ module SubSpawn::Win32::FFI
 			:y, :short
 
 		def initialize(x=0,y=0)
-			super
+			super()
 			self[:x] = x
 			self[:y] = y
 		end
@@ -127,8 +126,8 @@ module SubSpawn::Win32::FFI
 
 	attach_function :InitializeProcThreadAttributeList, %i{buffer_out dword dword buffer_inout}, :bool
 
-	# the first handle should really be a pointer, but we use it as a pointer
-	attach_function :UpdateProcThreadAttribute, %i{buffer_inout dword pointer pointer size_t pointer pointer}, :bool
+	# the first pointer/handle should really be a pointer, but we use it as a pointer
+	attach_function :UpdateProcThreadAttribute, %i{buffer_inout dword handle handle size_t pointer pointer}, :bool
 	attach_function :DeleteProcThreadAttributeList, [:buffer_inout], :void
 	
 	# PTY
@@ -140,7 +139,7 @@ module SubSpawn::Win32::FFI
 
 	ffi_lib FFI::Library::LIBC
 
-	attach_pfunc :get_osfhandle, :_get_osfhandle, [:int], :shandle
+	attach_function :get_osfhandle, :_get_osfhandle, [:int], :shandle
 
 	# Constants
 	# TODO: are these already somewhere?
@@ -171,9 +170,25 @@ module SubSpawn::Win32::FFI
 	CREATE_DEFAULT_ERROR_MODE		= 0x04000000
 	CREATE_NO_WINDOW				= 0x08000000
 
-	# TODO: fill this out
-	STARTF_USESTDHANDLES	= 0x0000010
-	attach_variable :vPROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, :pointer
+	STARTF_USESHOWWINDOW	= 0x00000001
+	STARTF_USESIZE		 	= 0x00000002
+	STARTF_USEPOSITION		= 0x00000004
+	STARTF_USECOUNTCHARS	= 0x00000008
+	STARTF_USEFILLATTRIBUTE	= 0x00000010
+	STARTF_RUNFULLSCREEN	= 0x00000020
+	STARTF_FORCEONFEEDBACK	= 0x00000040
+	STARTF_FORCEOFFFEEDBACK	= 0x00000080
+	STARTF_USESTDHANDLES	= 0x00000100
+	STARTF_USEHOTKEY		= 0x00000200
+	#
+	STARTF_TITLEISLINKNAME	= 0x00000800
+	STARTF_TITLEISAPPID		= 0x00001000
+	STARTF_PREVENTPINNING	= 0x00002000
+	#
+	STARTF_UNTRUSTEDSOURCE	= 0x00008000
+
+	# TODO: expose other values for the proc thread list
+	PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016
 
 	# Also unsigned, but this is convienent, and ffi takes care of the rest
 	STD_HANDLE = {

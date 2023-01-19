@@ -118,9 +118,13 @@ module SubSpawn::Win32::FFI
 	end
   
 	ffi_lib :kernel32
+
+	attach_function :GetLastError, [], :dword
+	attach_function :WaitForSingleObject, [:handle, :dword], :dword
+	attach_function :GetExitCodeProcess, [:handle, :buffer_out], :bool
+	attach_function :OpenProcess, [:dword, :bool, :dword], :handle
   
 	attach_function :CloseHandle, [:handle], :bool
-	attach_function :WaitForSingleObject, [:handle, :dword], :dword
 	attach_function :CreateProcess, :CreateProcessW, %i{buffer_in buffer_inout pointer pointer bool dword buffer_in buffer_in pointer pointer}, :bool # TODO: specify the types, not just pointers?
 	attach_function :GetStdHandle, [:dword], :handle
 
@@ -140,6 +144,7 @@ module SubSpawn::Win32::FFI
 	ffi_lib FFI::Library::LIBC
 
 	attach_function :get_osfhandle, :_get_osfhandle, [:int], :shandle
+	attach_function :get_errno, :_get_errno, [:buffer_inout], :int
 
 	# Constants
 	# TODO: are these already somewhere?
@@ -199,6 +204,10 @@ module SubSpawn::Win32::FFI
 
 	#PTY
 	PSEUDOCONSOLE_INHERIT_CURSOR = 1
+
+	# waiting
+	STILL_ACTIVE = 259
+	PROCESS_QUERY_INFORMATION = 0x00000400
 	
 	# TODO: error reporting?
 	def self.free hwnd

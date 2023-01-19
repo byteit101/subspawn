@@ -92,12 +92,12 @@ class Win32
 		#@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
 
 		# startup info
-		use_stdio = 0 #| W::STARTF_USESTDHANDLES
+		use_stdio = W::STARTF_USESTDHANDLES
 		startupinfo.dwFlags = use_stdio | @win[:reqflags] | @win[:flags]
 		if use_stdio != 0
-		startupinfo.hStdInput = handle_for(0)
-		startupinfo.hStdOutput = handle_for(1)
-		startupinfo.hStdError = handle_for(2)
+			startupinfo.hStdInput = handle_for(0)
+			startupinfo.hStdOutput = handle_for(1)
+			startupinfo.hStdError = handle_for(2)
 		end
 		cap1 = startupinfo.lpDesktop = @win[:desktop].to_wstrp if @win[:desktop]
 		cap2 = startupinfo.lpTitle = @win[:title].to_wstrp if @win[:title]
@@ -159,7 +159,6 @@ class Win32
 				end
 				# ARGP/ENV
 				envp_holder = make_envp
-
 					# Launch!
 					# Note that @path can be null on windows, but we will always enforce otherwise
 					ret = W.CreateProcess(
@@ -176,7 +175,7 @@ class Win32
 					)
 					if !ret
 						# TODO: CRuby does map_errno(GetLastError()) Do we need to do that for does FFI.errno do that already?
-						raise SystemCallError.new("Spawn Error: CreateProcess", FFI.errno)
+						raise SystemCallError.new("Spawn Error: CreateProcess: #{self.class.errno}", self.class.errno)
 					end
 					W.CloseHandle(proc_info.hProcess)
 					W.CloseHandle(proc_info.hThread)
@@ -344,7 +343,43 @@ class Win32
 		# TODO: implement that
 		# https://learn.microsoft.com/en-us/archive/blogs/twistylittlepassagesallalike/everyone-quotes-command-line-arguments-the-wrong-way
 		# I think this should work, maybe?
-		["cmd.exe", "/c", string.to_str.gsub(/[)(%!^"><&|)]/, "^\\1")]
+		["cmd.exe", "/c", string.to_str]#.gsub(/([)(%!^"><&|)])/, "^\\1")]
+	end
+
+	def self.errno
+		errno = 0
+		::FFI::MemoryPointer.new(:int, 1) do |errnoholder|
+			W.get_errno(errnoholder)
+			errno = errnoholder.read_int
+		end
+		return {win: W.GetLastError(), c: errno}.inspect
+	end
+
+	# Ruby raises EChild, so we have to reimplement wait/waitpid2
+	def self.waitpid2(pid)
+		# TODO: process limited information maybe?
+		hndl = W.OpenProcess(W::PROCESS_QUERY_INFORMATION, false, pid)
+
+		# TODO: proper error code
+		raise SystemCallError.new("Missing processs") if hndl == 0 || hndl == W::INVALID_HANDLE_VALUE
+		begin
+			tmp = _single_exit_poll hndl
+			while tmp.nil?
+				sleep 0.01
+				W.WaitForSingleObject(hndl, W::INFINITE)
+				tmp = _single_exit_poll hndl
+			end
+			return [pid, tmp]
+		ensure
+			W.CloseHandle(hndl)
+		end
+	end
+	def self._single_exit_poll hndl
+		::FFI::MemoryPointer.new(:int, 1) do |buf|
+			raise SystemCallError.new("polling fail") unless W::GetExitCodeProcess(hndl, buf)
+			tmp = buf.read(:int)
+			return tmp == W::STILL_ACTIVE ? nil : tmp
+		end
 	end
 
 	COMPLETE_VERSION = {
@@ -368,7 +403,7 @@ class Win32
 				raise ArgumentError, "Nulls not allowed in environment variable: #{str.inspect}" if str.include? "\0" # By Spec
 				raise ArgumentError, "Variable key cannot include '=': #{str.inspect}" if k.include? "=" # By Spec
 				"#{str}\0"
-			} + "\0" # null end of argp
+			}.join("") + "\0" # null end of argp
 			return strings.to_wstr
 		end
 	end
@@ -384,7 +419,7 @@ class Win32
 	# https://stackoverflow.com/questions/31838469/how-do-i-convert-argv-to-lpcommandline-parameter-of-createprocess
 	def quote_arg(str)
 		# if no whitespace or quote characters, this is a "simple" argument
-		return str unless str =~ / \t\n\v"/ # TODO: no \r?
+		return str unless str =~ /[ \t\n\v"]/ # TODO: no \r?
 		backslashes = nil
 		base = str.each_char.map do |c|
 			if c != "\\"

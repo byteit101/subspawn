@@ -85,7 +85,6 @@ RSpec.describe SubSpawn::Win32 do
 			r.close
 			w.close
 		end
-		# TODO: make these work on windows
 
 		it "can redirect stderr" do
 			r,w = IO.pipe
@@ -100,7 +99,7 @@ RSpec.describe SubSpawn::Win32 do
 			r.close
 			w.close
 		end
-		# TODO: file redirection should be supported too...!
+		
 		it "can redirect stdin" do
 			r,w = IO.pipe
 			w << "some std in\n\r\n"
@@ -109,7 +108,25 @@ RSpec.describe SubSpawn::Win32 do
 			r.close
 			w.close
 		end
+		it "can open files" do
+			expect(do_shell_spawn(%Q{echo apple & echo banana 1>&2}){|x|x.fd_open(:out, T, IO::RDWR | IO::CREAT); x.fd_open(:err, "#{T}.second", IO::RDWR | IO::CREAT, 0o600)}).to eq 0
 
+			expect(File.read("#{T}.second").strip).to eq "banana"
+			expect(File.read(T).strip).to eq "apple"
+			# TODO: do permissions do anything on windows?
+			#expect(File.stat("#{T}.second").mode& 0o7777).to eq 0o600
+			#expect(File.stat(T).mode & 0o7777).to eq (0o666 & ~File.umask)
+		end
+		# TODO: I'm not sure this is relevant on windows?
+=begin
+		it "can close thigs" do
+			expect(do_shell_spawn(%Q{echo "sadness"}){|x|x.fd_close(:out); x.fd_open(:err, T, IO::RDWR | IO::CREAT);}).to eq 1
+			expect(File.read(T)).to include("I/O")
+			expect(File.read(T)).to include("error")
+			expect(File.read(T)).to include("echo")
+			expect(File.read(T)).to include("sh: 1")
+		end
+=end
 	end
 =begin
 	context "Terminal Control" do

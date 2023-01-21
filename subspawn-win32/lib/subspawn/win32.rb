@@ -27,6 +27,7 @@ class Win32
 	using WinStr
 
 	
+	OpenFD = Struct.new(:fd, :path, :mode, :flags, :ref)
 	def initialize(command, *args, arg0: command)
 		@path = command
 		#raise SpawnError, "Command not found: #{command}" unless @path
@@ -35,6 +36,7 @@ class Win32
 		@fd_map = {}
 		@fd_keeps = []
 		@fd_closes = []
+		@fd_opens = []
 		@cwd = nil
 		@pgroup = nil
 		@env = :default
@@ -66,6 +68,14 @@ class Win32
 		end.to_h
 		@fd_keeps.each{|x| fd_check(x)}
 		@fd_closes.each{|x| fd_check(x)}
+		@fd_opens.each{|x|
+			fd_check(x.fd)
+			raise SpawnError, "Invalid FD open: Not a number: #{x.mode.inspect}" unless x.mode.is_a? Integer
+			raise SpawnError, "Invalid FD open: Not a flag: #{x.flags.inspect}" unless x.flags.is_a? Integer
+			raise SpawnError, "Invalid FD open: Not a file: #{x.file.inspect}" unless File.exist? x.path or Dir.exist?(File.dirname(x.path))
+			raise SpawnError, "Invalid FD open: overwrites existing mapping #{x.file.inspect}" unless @fd_map[fd_number(x.fd)].nil?
+			@fd_map[fd_number(x.fd)] = x
+		}
 
 		@path = @path.gsub("/", "\\")
 		@cwd = @cwd.gsub("/", "\\") unless @cwd.nil?
@@ -87,9 +97,8 @@ class Win32
 		out_pid = nil
 		# set up file descriptors
 		
-		# TODO: SetHandleInformation(Inherit) etc
-		#@fd_keeps.each {|fd| sfa.addkeep(fd_number(fd)) }
-		#@fd_closes.each {|fd| sfa.addclose(fd_number(fd)) }
+		@fd_keeps.each {|fd| process_handle(fd, true) }
+		@fd_closes.each {|fd| process_handle(fd, false) }
 
 		# startup info
 		use_stdio = W::STARTF_USESTDHANDLES
@@ -183,6 +192,9 @@ class Win32
 					@out_thread = proc_info.dwThreadId
 					out_pid = proc_info.dwProcessId
 
+					# close our half of the files
+					@fd_map.values.select{|x|x.is_a? OpenFD}.map{|x|x.ref.close; x.ref = nil}
+
 				if numAttribs > 0
 					W::DeleteProcThreadAttributeList(attribList)
 				end
@@ -199,6 +211,12 @@ class Win32
 		self
 	end
 
+	def fd_open(number, path, flags = 0, mode=0o666) # umask will remove bits
+		num = number.is_a?(Symbol) ? Std[number] : number.to_i
+		raise ArgumentError, "Invalid file descriptor number: #{number}. Supported values = 0.. or #{std.keys.inspect}" if num.nil?
+		@fd_opens << OpenFD.new(number, path, mode, flags)
+		self
+	end
 	def fd_keep(io_or_fd)
 		@fd_keep << io_or_fd
 		self
@@ -439,7 +457,12 @@ class Win32
 		%Q{"#{base}#{backslashes}#{backslashes}"} # A quote goes next, so double escape again
 	end
 	def handle_for(fdi)
-		fd = fd_number(@fd_map[fdi] || fdi)
+		mapped = @fd_map[fdi] || fdi
+		if mapped.is_a? OpenFD
+			mapped.ref = File.new(mapped.path, mapped.flags, mapped.mode)
+			mapped = mapped.ref.fileno
+		end
+		fd = fd_number(mapped)
 		hndl = W.get_osfhandle(fd)
 
 		if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
@@ -456,6 +479,20 @@ class Win32
 		#puts "stdio[#{fdi}] = #{@fd_map[fdi]} => #{fd} => #{hndl} (#{res})"
 		hndl
 	end
+
+	def process_handle(fdo, share)
+		fd = fd_number(fdo)
+		hndl = W.get_osfhandle(fd)
+
+		if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
+			raise SystemCallError.new("Invalid FD/handle for keep/close")
+		end
+		# ensure the handle is inheritable
+		res = W.SetHandleInformation(hndl, W::HANDLE_FLAG_INHERIT, share ? W::HANDLE_FLAG_INHERIT : 0)
+		raise SystemCallError.new("Couldn't change handle inheritance (#{self.class.errno})") unless res
+		hndl
+	end
+
 	def ensure_file_string(path)
 		if defined? JRUBY_VERSION # accept File and Path java objects
 			path = path.to_file if path.respond_to? :to_file

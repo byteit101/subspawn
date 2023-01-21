@@ -34,8 +34,7 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
         </tr>
         <tr>
             <td>Windows</td>
-            <td>Accepting pull requests!</td>
-            <td>Accepting pull requests!</td>
+            <td rowspan=2><tt>subspawn-win32</tt></td>
         </tr>
         <tr>
             <td>JVM/Jar</td>
@@ -46,16 +45,27 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
 
 Installation
 -----------
-For now, only POSIX systems are supported:
+For now, subspawn uses hard dependencies, but this may change.
+
+For POSIX systems (MacOS, Linux, etc...):
 ```
 $ gem install subspawn subspawn-posix
+```
+
+For Windows systems:
+```
+$ gem install subspawn subspawn-win32
+```
+
+Then:
+```
 
 require 'subspawn'
 # or, to replace the built in spawn methods:
 # require 'subspawn/replace'
 ```
 
-Using JRuby? Subspawn is already installed!
+Using JRuby? A version of SubSpawn is already installed!
 
 What is in this repository
 -------
@@ -66,6 +76,7 @@ Folders:
  - ffi-bindings-libfixposix (gem)
  - ffi-binary-libfixposix (gem)
  - subspawn-posix (gem)
+ - subspawn-win32 (gem)
  - subspawn (gem)
  - jruby-jar (gem/jar building utilities)
 
@@ -93,6 +104,10 @@ subspawn-posix
 -----------
 The mid-level API for Unixy machines. Exposes all the capabilities of libfixposix with none of the hassle of C or FFI. Look at the included RBS file for all methods and types. Also includes minimal PTY opening helper.
 
+subspawn-win32
+-----------
+The mid-level API for Windows machines. Win32 API's are exposed via FFI, then regularized via the mid-level API, like subspawn-posix. Also includes an early PTY <-> ConPTY translation layer. Yes, you heard that right, PTY.open/PTY.spawn on Windows! (Require [ConPTY from Windows 10 1803](https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/) or later)
+
 subspawn
 -----------
 The unified high-level API for all Ruby platforms. Also includes post-launch utilities and a `PTY` library implementation. The main interface is `SubSpawn.spawn()` which is modeled after `Process.spawn`, but with extended features. These extended features can be brought into `Process.spawn` itself with `subspawn/replace`. This lets `Open3` and other utilities that pass args to `spawn` also benefit from the extra features of SubSpawn.
@@ -101,9 +116,10 @@ The unified high-level API for all Ruby platforms. Also includes post-launch uti
 Roadmap
 ------------
 
- * 0.1 - intial release
- * 0.2 - windows & install-time builds
- * 0.3 - better validation/errors
+ * 0.1 - intial release (DONE)
+ * 0.2 - windows (WIP, everything except PTY's should work right now though)
+ * 0.3 - install-time builds
+ * 0.4 - better validation/errors
 
 Please note that SubSpawn is still in its infancy and is being actively developed.
 
@@ -112,7 +128,6 @@ API guarantees:
  * Rubyspec will continue to pass (Process.spawn & PTY.spawn are compatble with Subspawn.compat*)
  * subspawn-`$PLATFORM` may change from 0.1 to 0.2, etc
  * subspawn (high-level) will otherwise use semantic versioning
-
 
 # Development
 

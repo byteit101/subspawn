@@ -70,7 +70,7 @@ module SubSpawn::Win32::FFI
 		:dwFlags, :dword,
 		:wShowWindow, :word,
 		:cbReserved2, :word,
-		:lpReserved2, :uint8_t,
+		:lpReserved2, :pointer,
 		:hStdInput, :handle,
 		:hStdOutput, :handle,
 		:hStdError, :handle,

@@ -86,30 +86,30 @@ RSpec.describe SubSpawn::Win32 do
 			w.close
 		end
 		# TODO: make these work on windows
-=begin		
+
 		it "can redirect stderr" do
 			r,w = IO.pipe
-			expect(do_shell_spawn(%Q{echo hello}){|x|x.fd(:err, w); x.fd(:out, :err)}).to eq 0
+			expect(do_shell_spawn(%Q{echo hello}){|x|x.fd(:err, w); x.fd(:out, w)}).to eq 0
 			sleep 1
-			expect(r.read_nonblock(5)).to eq "hello"
+			expect(r.read_nonblock(7)).to eq "hello\r\n"
 
-			expect(do_shell_spawn(%Q{echo hello >&2}){|x|x.fd(:err, w)}).to eq 0
+			expect(do_shell_spawn(%Q{echo hello 1>&2}){|x|x.fd(:err, w)}).to eq 0
 			sleep 1
 			expect(r.read_nonblock(5)).to eq "hello"
 
 			r.close
 			w.close
 		end
-
+		# TODO: file redirection should be supported too...!
 		it "can redirect stdin" do
 			r,w = IO.pipe
 			w << "some std in\n\r\n"
-			expect(do_shell_spawn(%Q{read foo; echo -n "got: $foo" > #{T}}){|x|x.fd(:in, r)}).to eq 0
-			expect(File.read(T)).to eq "got: some std in"
+			expect(do_shell_spawn(%Q{set /p foo=ThePrompt & echo got: %foo% > #{T}}){|x|x.fd(:in, r)}).to eq 0
+			expect(File.read(T)&.strip).to eq "got: some std in"
 			r.close
 			w.close
 		end
-=end
+
 	end
 =begin
 	context "Terminal Control" do

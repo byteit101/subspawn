@@ -453,7 +453,7 @@ class Win32
 		res = W.SetHandleInformation(hndl, W::HANDLE_FLAG_INHERIT, W::HANDLE_FLAG_INHERIT)
 		raise SystemCallError.new("Non-inheritable handle for input fd #{fdi} (#{self.class.errno})") unless res
 
-		puts "stdio[#{fdi}] = #{@fd_map[fdi]} => #{fd} => #{hndl} (#{res})"
+		#puts "stdio[#{fdi}] = #{@fd_map[fdi]} => #{fd} => #{hndl} (#{res})"
 		hndl
 	end
 	def ensure_file_string(path)

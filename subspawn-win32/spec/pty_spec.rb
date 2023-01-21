@@ -15,17 +15,24 @@ RSpec.describe SubSpawn::Win32::PtyHelper do
 		expect(s).to be_a pty::SlavePtyIO
 
 		expect(m.inspect).to start_with "#<masterpty:"
-		#expect(m.tty?).to be true # TODO
-#		expect(m.sync).to be true
+		expect(m.tty?).to be true # TODO
+		expect(m.sync).to be true
 
 		expect(s.inspect).to start_with "#<winpty"
 		expect(s.tty?).to be true
-#		expect(s.sync).to be true
+		expect(s.sync).to be true
+
+		expect(s.con_pty).not_to be nil
+		expect(m.con_pty).not_to be nil
+
+		expect(s.con_pty).to be_a pty::ConPTYHelper
+		expect(m.con_pty).to be_a pty::ConPTYHelper
+		expect(s.con_pty).to eq m.con_pty
 
 		s.close
 		m.close
+		s.con_pty.close # TODO: automatic gc?
 	end
-=begin
 	it "supports block form" do
 		gotten = nil
 		ret = pty.open do |ms|
@@ -41,6 +48,7 @@ RSpec.describe SubSpawn::Win32::PtyHelper do
 		expect(ret).to eq 5
 		expect(gotten[0].closed?).to eq true
 		expect(gotten[1].closed?).to eq true
+		expect(gotten[1].con_pty.closed?).to eq true
 	end
 
 	it "supports basic copy" do
@@ -48,14 +56,14 @@ RSpec.describe SubSpawn::Win32::PtyHelper do
 				m << "hello\n"
 				m.flush
 				expect(s.gets).to eq "hello\n"
-				expect(m.gets).to eq "hello\r\n" # echo on
+				# TODO: we don't have echo in ConPTY
+				#expect(m.gets).to eq "hello\r\n" # echo on
 
 				s << "typing\r\n"
 				s.flush
-				expect(m.gets).to eq "typing\r\r\n"
+				expect(m.gets).to eq "typing\n" # Windows reverse-translates it?
 
 				"yes"
 			end).to eq "yes"
 	end
-=end
 end

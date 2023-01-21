@@ -95,9 +95,9 @@ class Win32
 		use_stdio = W::STARTF_USESTDHANDLES
 		startupinfo.dwFlags = use_stdio | @win[:reqflags] | @win[:flags]
 		if use_stdio != 0
-			startupinfo.hStdInput = handle_for(0)
-			startupinfo.hStdOutput = handle_for(1)
-			startupinfo.hStdError = handle_for(2)
+			startupinfo.hStdInput = handle_for(StdIn)
+			startupinfo.hStdOutput = handle_for(StdOut)
+			startupinfo.hStdError = handle_for(StdErr)
 		end
 		cap1 = startupinfo.lpDesktop = @win[:desktop].to_wstrp if @win[:desktop]
 		cap2 = startupinfo.lpTitle = @win[:title].to_wstrp if @win[:title]
@@ -449,6 +449,11 @@ class Win32
 				raise SystemCallError.new("Invalid FD/handle for input fd #{fdi}", FFI.errno)
 			end
 		end
+		# ensure the handle is inheritable
+		res = W.SetHandleInformation(hndl, W::HANDLE_FLAG_INHERIT, W::HANDLE_FLAG_INHERIT)
+		raise SystemCallError.new("Non-inheritable handle for input fd #{fdi} (#{self.class.errno})") unless res
+
+		puts "stdio[#{fdi}] = #{@fd_map[fdi]} => #{fd} => #{hndl} (#{res})"
 		hndl
 	end
 	def ensure_file_string(path)

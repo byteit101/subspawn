@@ -86,15 +86,15 @@ RSpec.describe SubSpawn::Win32 do
 			w.close
 		end
 		# TODO: make these work on windows
-=begin
+=begin		
 		it "can redirect stderr" do
 			r,w = IO.pipe
-			expect(do_shell_spawn(%Q{echo -n hello}){|x|x.fd(:err, w); x.fd(:out, :err)}).to eq 0
-			sleep 0.1
+			expect(do_shell_spawn(%Q{echo hello}){|x|x.fd(:err, w); x.fd(:out, :err)}).to eq 0
+			sleep 1
 			expect(r.read_nonblock(5)).to eq "hello"
 
 			expect(do_shell_spawn(%Q{echo hello >&2}){|x|x.fd(:err, w)}).to eq 0
-			sleep 0.1
+			sleep 1
 			expect(r.read_nonblock(5)).to eq "hello"
 
 			r.close

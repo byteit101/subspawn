@@ -49,6 +49,7 @@ module PtyHelper
 			seek
 			stat
 			sysread
+			sync
 
 			autoclose=
 			binmode=
@@ -69,6 +70,7 @@ module PtyHelper
 			syswrite
 			write
 			write_nonblock
+			sync
 			
 			autoclose=
 			binmode=
@@ -104,6 +106,10 @@ module PtyHelper
 		def underlying_write_io
 			@write
 		end
+
+		def closed?
+			@read.closed? && @write.closed?
+		end
 	end
 
 	class MasterPtyIO < BidiMergedIO
@@ -124,6 +130,12 @@ module PtyHelper
 
 		def winsize= arg
 			@conpty.winsize = arg
+		end
+		def tty?
+			true
+		end
+		def isatty
+			true
 		end
 
 		# Subspawn-specific feature
@@ -189,7 +201,15 @@ module PtyHelper
 		def close
 			if @close
 				W::ClosePseudoConsole(@hpc) # TODO!
+				@hpc = nil
 				@pipes.reject(&:closed?).each(&:close)
+			end
+		end
+		def closed?
+			if @close
+				@hpc.nil? && @pipes.all?(&:closed?)
+			else
+				nil # falsy
 			end
 		end
 	end

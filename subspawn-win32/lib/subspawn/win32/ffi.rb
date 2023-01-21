@@ -133,6 +133,8 @@ module SubSpawn::Win32::FFI
 	# the first pointer/handle should really be a pointer, but we use it as a pointer
 	attach_function :UpdateProcThreadAttribute, %i{buffer_inout dword handle handle size_t pointer pointer}, :bool
 	attach_function :DeleteProcThreadAttributeList, [:buffer_inout], :void
+
+	attach_function :SetHandleInformation, [:handle, :dword, :dword], :bool
 	
 	# PTY
 	# HPCON == handle
@@ -154,6 +156,7 @@ module SubSpawn::Win32::FFI
 	INFINITE = 0xFFFFFFFF
 	INVALID_HANDLE_VALUE = -1 # unsure if signed or unsigned is better
 	HANDLE_NEGATIVE_TWO = -2
+	HANDLE_FLAG_INHERIT = 1
 
 	# Process flags
 	DEBUG_PROCESS					= 0x00000001

@@ -34,7 +34,7 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
         </tr>
         <tr>
             <td>Windows</td>
-            <td colspan=2><tt>subspawn-win32</tt></td>
+            <td colspan=2 align=center><tt>subspawn-win32</tt></td>
         </tr>
         <tr>
             <td>JVM/Jar</td>
@@ -134,6 +134,8 @@ API guarantees:
 
 After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.
 
+To build the binary locally for development (highly recommended): `cd ffi-binary-libfixposix && rake local`
+
 To install these gem onto your local machine, run `bundle exec rake build` and install all the gems with `gem install */pkg/*.gem`.
 
 Test by integrating into JRuby. Notable tests:
@@ -141,8 +143,9 @@ Test by integrating into JRuby. Notable tests:
  * io/console. check out and run `TESTOPTS="--verbose" jruby -S rake test`
  * rspec tests. check out jruby and run `bin/jruby -S rake spec:ruby`, looking for spawn or PTY errors 
 
-For local JRby integration testing, consider running `rerun --no-notify --ignore 'java-jar/*' 'cd java-jar && rake'` after you export `JRUBY_DIR` to the path to your jruby source checkout
+For local JRuby integration testing, consider running `rerun --no-notify --ignore 'java-jar/*' 'cd java-jar && rake'` after you export `JRUBY_DIR` to the path to your jruby source checkout
 
+For unit testing, `subspawn` and `subspawn-posix` have rspec tests that run on MacOS & Linux, while `subspawn-win32` has rspec tests that run on Windows.
 
 ## Contributing
 

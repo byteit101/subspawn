@@ -52,6 +52,7 @@ module SubSpawn::Internal
 		child_lookup = {}
 		fds.map do |dests, src|
 			d = dests.map{|x| parse_fd(x, true)} # TODO: configurable
+			src = src.to_io if src.respond_to? :to_io
 			src = case src
 			when Array
 				case src.first

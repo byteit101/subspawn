@@ -216,7 +216,11 @@ module PtyHelper
 	module IoHelper
 		refine IO do
 			def to_hndl
-				hndl = W.get_osfhandle(self.fileno)
+				hndl = if RUBY_ENGINE == "jruby"
+					self.fileno # jruby returns the raw handle, not the fd
+				else
+					W.get_osfhandle(self.fileno)
+				end
 
 				if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
 					raise SystemCallError.new("Invalid FD/handle for input fd #{self}", FFI.errno)

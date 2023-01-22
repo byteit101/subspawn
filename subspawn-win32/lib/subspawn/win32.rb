@@ -462,8 +462,7 @@ class Win32
 			mapped.ref = File.new(mapped.path, mapped.flags, mapped.mode)
 			mapped = mapped.ref.fileno
 		end
-		fd = fd_number(mapped)
-		hndl = W.get_osfhandle(fd)
+		hndl = fd2handle(fd)
 
 		if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
 			if @fd_map.nil?
@@ -481,8 +480,7 @@ class Win32
 	end
 
 	def process_handle(fdo, share)
-		fd = fd_number(fdo)
-		hndl = W.get_osfhandle(fd)
+		hndl = fd2handle(fdo)
 
 		if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
 			raise SystemCallError.new("Invalid FD/handle for keep/close")
@@ -523,6 +521,13 @@ class Win32
 			Std[source]
 		else
 			raise SpawnError, "Invalid FD map: Not a io or number: #{source.inspect}"
+		end
+	end
+	def fd2handle(fdo)
+		if RUBY_ENGINE == "jruby" && ((fdo.is_a?(IO) && !fdo.is_a?(File)) || (fdo.is_a? Integer and fdo > 9) # handles are (usually?) greater than 9
+			tmp = fd_number(fdo) # JRuby IO.pipe.fileno returns a proper handle!
+		else
+			W.get_osfhandle(fd_number(fdo))
 		end
 	end
 

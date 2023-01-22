@@ -19,8 +19,12 @@ RSpec.describe SubSpawn::Win32 do
 		F.rm_f T
 	end
 
-	def do_shell_spawn(cmd, wait: false, **kw)
-		cmd = Wn.new(*Wn.shell_command(cmd), **kw)
+	def do_shell_spawn(cmd, wait: false, extra: nil, **kw)
+		shcmd = Wn.shell_command(cmd)
+		if extra != nil
+			shcmd = [shcmd.first, *extra, *shcmd[1..-1]]
+		end
+		cmd = Wn.new(*shcmd, **kw)
 		cmd.command = "c:/windows/system32/cmd.exe"
 		yield cmd if block_given?
 		pid = cmd.spawn!
@@ -103,7 +107,7 @@ RSpec.describe SubSpawn::Win32 do
 		it "can redirect stdin" do
 			r,w = IO.pipe
 			w << "some std in\n\r\n"
-			expect(do_shell_spawn(%Q{set /p foo=ThePrompt & echo got: %foo% > #{T}}){|x|x.fd(:in, r)}).to eq 0
+			expect(do_shell_spawn(%Q{set /p foo=ThePrompt& echo got: !foo! > #{T}}, extra: %w{/V:ON}){|x|x.fd(:in, r)}).to eq 0
 			expect(File.read(T)&.strip).to eq "got: some std in"
 			r.close
 			w.close

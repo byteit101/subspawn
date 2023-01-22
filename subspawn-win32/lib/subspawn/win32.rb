@@ -524,7 +524,7 @@ class Win32
 		end
 	end
 	def fd2handle(fdo)
-		if RUBY_ENGINE == "jruby" && ((fdo.is_a?(IO) && !fdo.is_a?(File)) || (fdo.is_a? Integer and fdo > 9) # handles are (usually?) greater than 9
+		if RUBY_ENGINE == "jruby" && ((fdo.is_a?(IO) && !fdo.is_a?(File)) || (fdo.is_a? Integer and fdo > 9)) # handles are (usually?) greater than 9
 			tmp = fd_number(fdo) # JRuby IO.pipe.fileno returns a proper handle!
 		else
 			W.get_osfhandle(fd_number(fdo))

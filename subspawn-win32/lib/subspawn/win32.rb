@@ -462,7 +462,7 @@ class Win32
 			mapped.ref = File.new(mapped.path, mapped.flags, mapped.mode)
 			mapped = mapped.ref.fileno
 		end
-		hndl = fd2handle(fd)
+		hndl = fd2handle(mapped)
 
 		if hndl == W::INVALID_HANDLE_VALUE || hndl == W::HANDLE_NEGATIVE_TWO
 			if @fd_map.nil?

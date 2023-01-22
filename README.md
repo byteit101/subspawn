@@ -34,7 +34,7 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
         </tr>
         <tr>
             <td>Windows</td>
-            <td rowspan=2><tt>subspawn-win32</tt></td>
+            <td colspan=2><tt>subspawn-win32</tt></td>
         </tr>
         <tr>
             <td>JVM/Jar</td>
@@ -47,6 +47,8 @@ Installation
 -----------
 For now, subspawn uses hard dependencies, but this may change.
 
+Using JRuby 9.4 or later? A compatible version of SubSpawn is already installed!
+
 For POSIX systems (MacOS, Linux, etc...):
 ```
 $ gem install subspawn subspawn-posix
@@ -58,14 +60,11 @@ $ gem install subspawn subspawn-win32
 ```
 
 Then:
-```
-
+```rb
 require 'subspawn'
 # or, to replace the built in spawn methods:
 # require 'subspawn/replace'
 ```
-
-Using JRuby? A version of SubSpawn is already installed!
 
 What is in this repository
 -------
@@ -107,6 +106,8 @@ The mid-level API for Unixy machines. Exposes all the capabilities of libfixposi
 subspawn-win32
 -----------
 The mid-level API for Windows machines. Win32 API's are exposed via FFI, then regularized via the mid-level API, like subspawn-posix. Also includes an early PTY <-> ConPTY translation layer. Yes, you heard that right, PTY.open/PTY.spawn on Windows! (Require [ConPTY from Windows 10 1803](https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/) or later)
+
+Note: PTY's currently work on best on CRuby. JRuby support is being worked on, this gem will eventually ship with JRuby once this is fixed.
 
 subspawn
 -----------

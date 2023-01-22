@@ -4,7 +4,7 @@ require_relative "lib/subspawn/win32/version"
 
 Gem::Specification.new do |spec|
   spec.name = "subspawn-win32"
-  spec.version = SubSpawn::WIN32::VERSION
+  spec.version = SubSpawn::Win32::VERSION
   spec.authors = ["Patrick Plenefisch"]
   spec.email = ["simonpatp@gmail.com"]
 

@@ -114,8 +114,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-        with:
-          submodules: recursive
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1.117.0
         with:

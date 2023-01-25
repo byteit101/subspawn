@@ -128,7 +128,7 @@ task :binary, [:target] do |_, args|
 	if host.include? "arm64" and !RbConfig.expand("$(target_cpu)".dup).include? "arm"
 		# cross compiling mac
 		puts "cross compiling yes"
-		recipe.configure_options += ["--target=arm64-apple-macos11", "CFLAGS=-target arm64-apple-macos11", "LDFLAGS=-target arm64-apple-macos11"] # why is it different? idk...
+		recipe.configure_options += ["--target=arm64-apple-darwin", "CFLAGS=-target arm64-apple-darwin -arch arm64", "LDFLAGS=-target arm64-apple-darwin "] # why is it different? idk...
 	end
 	mactest = true
 	puts "Searching for host '#{host}'..."

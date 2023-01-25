@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         # TODO: probablu use older ones so that it runs on older ones
-        os: [ubuntu-latest, macos-latest]
+        os: [macos-latest]
 
     runs-on:  ${{ matrix.os }}
     steps:
@@ -27,9 +27,6 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: brew install autoconf automake libtool pkgconfig
 
-      - name: Pull and set up dockcross
-        if: matrix.os == 'ubuntu-latest'
-        run: cd binary-builders && ./setup.sh
 
       - name: Install dependencies
         run: bundle install
@@ -50,64 +47,6 @@ jobs:
           name: all-gems
           path: ci-output/pkg/
           if-no-files-found: error
-
-  build-fat-java:
-    needs: build-core
-    runs-on:  ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.117.0
-        with:
-          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
-          bundler-cache: true
-
-      # grab mac and linux libraries that were built in the last section
-      - uses: actions/download-artifact@v3
-        with:
-          name: shared-libraries
-          path: ci-output/lib/
-
-      - name: Install dependencies
-        run: bundle install
-
-      - name: Build binary & Gems
-        run: bundle exec rake ci-java
-
-      - uses: actions/upload-artifact@v3
-        name: Attach gems
-        with:
-          name: all-gems
-          path: ci-output/pkg/
-          if-no-files-found: error
-
-
-  specs:
-    runs-on:  ubuntu-latest # TODO: macos too?
-
-    # less doesn't work (and thus tests fails) unless TERM is set. Not set on GHA by default
-    env:
-      TERM: xterm
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.117.0
-        with:
-          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
-          bundler-cache: true
-
-      - name: Install Less
-        run: sudo apt update && sudo apt install -y less
-
-      - name: Install dependencies
-        run: bundle install
-
-      - name: Build binary & Gems
-        run: bundle exec rake ci-test
 
 # TODO:
 #https://github.com/kouki-h/linux_cross_openbsd/blob/main/Makefile

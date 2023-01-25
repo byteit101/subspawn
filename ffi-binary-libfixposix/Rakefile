@@ -124,8 +124,8 @@ task :binary, [:target] do |_, args|
 		host = $1 # trim off darwin19 to just darwin
 		puts "trimming darwin"
 	end
-	puts "rbconf is #{!RbConfig.expand("$(target_cpu)").include?("arm")} from #{RbConfig.expand("$(target_cpu)")}"
-	if host.include? "arm64" and !RbConfig.expand("$(target_cpu)").include? "arm"
+	puts "rbconf is #{!RbConfig.expand("$(target_cpu)".dup).include?("arm")} from #{RbConfig.expand("$(target_cpu)".dup)}"
+	if host.include? "arm64" and !RbConfig.expand("$(target_cpu)".dup).include? "arm"
 		# cross compiling mac
 		puts "cross compiling yes"
 		recipe.configure_options += ["--target=arm64-apple-macos11"] # why is it different? idk...

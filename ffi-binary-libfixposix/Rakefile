@@ -122,12 +122,15 @@ task :binary, [:target] do |_, args|
 	mactest = false
 	if host.match(/^(.*darwin)[\d.]+$/)
 		host = $1 # trim off darwin19 to just darwin
-		if host.include? "arm64" and !RbConfig.expand("$(target_cpu)").include? "arm"
-			# cross compiling mac
-			recipe.configure_options += ["--target=arm64-apple-macos11"] # why is it different? idk...
-		end
-		mactest = true
+		puts "trimming darwin"
 	end
+	puts "rbconf is #{!RbConfig.expand("$(target_cpu)").include?("arm")} from #{RbConfig.expand("$(target_cpu)")}"
+	if host.include? "arm64" and !RbConfig.expand("$(target_cpu)").include? "arm"
+		# cross compiling mac
+		puts "cross compiling yes"
+		recipe.configure_options += ["--target=arm64-apple-macos11"] # why is it different? idk...
+	end
+	mactest = true
 	puts "Searching for host '#{host}'..."
 
 	platform, host = targets.find{|x| x.include? host } # find our host

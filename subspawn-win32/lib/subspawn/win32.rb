@@ -3,6 +3,8 @@ require 'subspawn/win32/ffi'
 module SubSpawn
 class SpawnError < RuntimeError
 end
+class UnimplementedError < RuntimeError
+end
 class Win32
 	W = SubSpawn::Win32::FFI
 
@@ -374,30 +376,55 @@ class Win32
 	end
 
 	# Ruby raises EChild, so we have to reimplement wait/waitpid2
-	def self.waitpid2(pid)
-		# TODO: process limited information maybe?
-		hndl = W.OpenProcess(W::PROCESS_QUERY_INFORMATION, false, pid)
+	def self.waitpid2(pid, options=0)
+		# only support pid == -1 (any of our children), and pid > 0 for windows
+		# TODO: -1 requres keeping a list of our children that could grow to 4GiB
+		# TODO: Think that through
+		raise SubSpawn::UnimplementedError("PID <= 0 not yet implemented in subspawn-win32") if pid <= 0
 
-		# TODO: proper error code
-		raise SystemCallError.new("Missing processs") if hndl == 0 || hndl == W::INVALID_HANDLE_VALUE
+		# TODO: process_limited_information maybe?
+		hndl = W.OpenProcess(W::PROCESS_QUERY_INFORMATION, false, pid)
+		raise Errno::ECHILD.new("No child processes") if hndl == 0 || hndl == W::INVALID_HANDLE_VALUE
+
+		timeout = (options & Process::WNOHANG) != 0 ? 0 : W::INFINITE
+
 		begin
 			tmp = _single_exit_poll hndl
-			while tmp.nil?
+			while tmp.nil? and (options & Process::WNOHANG) != 0
 				sleep 0.01
-				W.WaitForSingleObject(hndl, W::INFINITE)
+				W.WaitForSingleObject(hndl, timeout)
 				tmp = _single_exit_poll hndl
 			end
-			return [pid, tmp]
+			_set_status if tmp.nil?
+				nil
+			else
+				if tmp & 0xC000_0000 # if it was a windows exception
+					Process::Status.send :new, pid, nil, Signal.list(W::StatusPosixMap[tmp])
+				else
+					Process::Status.send :new, pid, tmp, nil
+				end
+			end
 		ensure
 			W.CloseHandle(hndl)
 		end
 	end
 	def self._single_exit_poll hndl
+		# TODO: cleanup error messages
 		::FFI::MemoryPointer.new(:int, 1) do |buf|
-			raise SystemCallError.new("polling fail") unless W::GetExitCodeProcess(hndl, buf)
+			# TODO: This should parsee the errno, I think?
+			raise SystemCallError.new("Waitpid Polling Failure", W::GetLastError()) unless W::GetExitCodeProcess(hndl, buf)
 			tmp = buf.read(:int)
 			return tmp == W::STILL_ACTIVE ? nil : tmp
 		end
+	end
+	def self._set_status status
+		if defined? JRUBY_VERSION # accept File and Path java objects
+			require 'jruby'
+			JRuby.runtime.current_context.last_exit_status = status
+		else
+			# TODO: figure out how to set $CHILD_STATUS and $?  for CRuby and truffle ruby
+		end
+		return status.nil? ? nil : [status.pid, status]
 	end
 
 	COMPLETE_VERSION = {

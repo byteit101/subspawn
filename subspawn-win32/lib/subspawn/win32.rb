@@ -408,6 +408,16 @@ class Win32
 			W.CloseHandle(hndl)
 		end
 	end
+	def self.last_status
+		@last_status
+	end
+
+	COMPLETE_VERSION = {
+		subspawn_win32: SubSpawn::Win32::VERSION,
+	}
+
+	private
+
 	def self._single_exit_poll hndl
 		# TODO: cleanup error messages
 		::FFI::MemoryPointer.new(:int, 1) do |buf|
@@ -424,14 +434,10 @@ class Win32
 		else
 			# TODO: figure out how to set $CHILD_STATUS and $?  for CRuby and truffle ruby
 		end
+		@last_status = status
 		return status.nil? ? nil : [status.pid, status]
 	end
-
-	COMPLETE_VERSION = {
-		subspawn_win32: SubSpawn::Win32::VERSION,
-	}
-
-	private
+	
 	def none
 		@@none ||= Object.new
 	end

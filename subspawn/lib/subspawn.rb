@@ -244,6 +244,43 @@ module SubSpawn
 		end
 	end
 
+	# Windows doesn't like mixing and matching who is spawning and who is waiting, so use
+	# subspawn.wait* if you used subspawn.spawn*, while using process.wait* if you used Process.spawn*
+	# though if you replace process, then it's a moot point
+	if SubSpawn::Platform.method(:waitpid2)
+		def wait(*args)
+			waitpid *args
+		end
+		def waitpid(*args)
+			waitpid2(*args)&.first
+		end
+		def wait2(*args)
+			waitpid2 *args
+		end
+		def waitpid2(*args)
+			SubSpawn::Platform.waitpid2 *args
+		end
+		def last_status
+			SubSpawn::Platform.last_status
+		end
+	else
+		def wait(*args)
+			Process.wait *args
+		end
+		def waitpid(*args)
+			Process.waitpid *args
+		end
+		def wait2(*args)
+			Process.wait2 *args
+		end
+		def waitpid2(*args)
+			Process.waitpid2 *args
+		end
+		def last_status
+			Process.last_status
+		end
+	end
+
 	COMPLETE_VERSION = {
 		subspawn: SubSpawn::VERSION,
 		platform: SubSpawn::Platform::COMPLETE_VERSION,

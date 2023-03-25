@@ -187,7 +187,8 @@ class Win32
 					)
 					if !ret
 						# TODO: CRuby does map_errno(GetLastError()) Do we need to do that for does FFI.errno do that already?
-						raise SystemCallError.new("Spawn Error: CreateProcess: #{self.class.errno}", self.class.errno)
+						raise SystemCallError.new("Spawn Error: CreateProcess: #{self.class.errno}", self.class.errno[:win])
+						# TODO: come up with a better errno
 					end
 					W.CloseHandle(proc_info.hProcess)
 					W.CloseHandle(proc_info.hThread)
@@ -373,7 +374,7 @@ class Win32
 			W.get_errno(errnoholder)
 			errno = errnoholder.read_int
 		end
-		return {win: W.GetLastError(), c: errno}.inspect
+		return {win: W.GetLastError(), c: errno}
 	end
 
 	# Ruby raises EChild, so we have to reimplement wait/waitpid2
@@ -391,20 +392,20 @@ class Win32
 
 		begin
 			tmp = _single_exit_poll hndl
-			while tmp.nil? and (options & Process::WNOHANG) != 0
-				sleep 0.01
+			while tmp.nil? and (options & Process::WNOHANG) == 0
+				sleep 0.01 # Somehow, this still loops sometimes
 				W.WaitForSingleObject(hndl, timeout)
 				tmp = _single_exit_poll hndl
 			end
-			_set_status if tmp.nil?
+			_set_status(if tmp.nil?
 				nil
 			else
-				if tmp & 0xC000_0000 # if it was a windows exception
-					Process::Status.send :new, pid, nil, Signal.list(W::StatusPosixMap[tmp])
+				if (tmp & 0xC000_0000) != 0 # if it was a windows exception
+					Process::Status.send :new, pid, nil, Signal.list[W::StatusPosixMap[tmp]]
 				else
 					Process::Status.send :new, pid, tmp, nil
 				end
-			end
+			end)
 		ensure
 			W.CloseHandle(hndl)
 		end

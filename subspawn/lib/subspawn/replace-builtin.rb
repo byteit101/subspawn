@@ -44,6 +44,9 @@ module Process
 			def last_status
 				SubSpawn.last_status
 			end
+			def detach pid
+				SubSpawn.detach(pid)
+			end
 		end
 	end
 end

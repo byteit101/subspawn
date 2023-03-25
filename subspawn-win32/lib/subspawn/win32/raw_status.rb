@@ -1,6 +1,6 @@
 # JRuby and CRuby both do internal things to build the status, so I think we can mostly just override it
 # without checking
-class Process
+module Process
 	class Status
 		def initialize(pid, status=nil, termsig=nil)
 			@pid = pid

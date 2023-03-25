@@ -46,7 +46,7 @@ RSpec.describe SubSpawn::Win32 do
 			pid = Wn.new("c:\\windows\\system32\\cmd.exe", "/c", "type NUL >> #{T}").spawn!
 			expect(pid).to be_a(Integer)
 			status = SubSpawn::Win32.waitpid2(pid)
-			expect(status).to eq [pid, Process.status.send(:new, pid, 0, nil)]
+			expect(status).to eq [pid, Process::Status.send(:new, pid, 0, nil)]
 			expect(file).to exist
 			expect(file).to be_file
 		end
@@ -64,11 +64,11 @@ RSpec.describe SubSpawn::Win32 do
 			expect(File.read(T)).to eq "cwd = #{File.dirname(__dir__).gsub("/", "\\")} \n"
 
 			expect(do_shell_spawn(%Q{echo cwd = %CD% > #{T}}){|x|x.cwd("c:/Windows")}).to eq 0
-			expect(File.read(T).downcase).to eq "cwd = c:\\windows \n"
+			expect(File.read(T).downcase).to eq "cwd = c:\\windows \r\n"
 		end
 		it "can overwrite the env" do
 			expect(do_shell_spawn(%Q{set > #{T}}){|x|x.env = {"RSPEC" => "Somehow"} }).to eq 0
-			expect(File.read(T)).to include("RSPEC=Somehow\n") # windows & wine add differing variables
+			expect(File.read(T)).to include("RSPEC=Somehow") # windows & wine add differing variables
 		end
 		it "can modify the env" do
 			expect(do_shell_spawn(%Q{set > #{T}})).to eq 0

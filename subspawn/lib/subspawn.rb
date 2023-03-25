@@ -248,36 +248,50 @@ module SubSpawn
 	# subspawn.wait* if you used subspawn.spawn*, while using process.wait* if you used Process.spawn*
 	# though if you replace process, then it's a moot point
 	if SubSpawn::Platform.method(:waitpid2)
-		def wait(*args)
+		def self.wait(*args)
 			waitpid *args
 		end
-		def waitpid(*args)
+		def self.waitpid(*args)
 			waitpid2(*args)&.first
 		end
-		def wait2(*args)
+		def self.wait2(*args)
 			waitpid2 *args
 		end
-		def waitpid2(*args)
+		def self.waitpid2(*args)
 			SubSpawn::Platform.waitpid2 *args
 		end
-		def last_status
+		def self.last_status
 			SubSpawn::Platform.last_status
 		end
 	else
-		def wait(*args)
+		def self.wait(*args)
 			Process.wait *args
 		end
-		def waitpid(*args)
+		def self.waitpid(*args)
 			Process.waitpid *args
 		end
-		def wait2(*args)
+		def self.wait2(*args)
 			Process.wait2 *args
 		end
-		def waitpid2(*args)
+		def self.waitpid2(*args)
 			Process.waitpid2 *args
 		end
-		def last_status
+		def self.last_status
 			Process.last_status
+		end
+	end
+
+	def self.detach(pid)
+		Thread.new do
+			pid, status = *SubSpawn.waitpid2(pid)
+			# while pid.nil?
+			# 	sleep 0.01
+			# 	pid, status = *SubSpawn.waitpid2(pid)
+			# end
+			status
+		end.tap do |thr|
+			thr[:pid] = pid
+			# TODO: does thread.pid need to exist?
 		end
 	end
 

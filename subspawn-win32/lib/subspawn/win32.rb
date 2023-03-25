@@ -1,5 +1,6 @@
 require 'subspawn/win32/version'
 require 'subspawn/win32/ffi'
+require 'subspawn/win32/raw_status'
 module SubSpawn
 class SpawnError < RuntimeError
 end
@@ -437,7 +438,7 @@ class Win32
 		@last_status = status
 		return status.nil? ? nil : [status.pid, status]
 	end
-	
+
 	def none
 		@@none ||= Object.new
 	end

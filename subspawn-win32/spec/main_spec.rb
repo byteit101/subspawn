@@ -31,9 +31,9 @@ RSpec.describe SubSpawn::Win32 do
 		expect(pid).to be_a(Integer)
 		expect(pid).to be > 0
 		status = SubSpawn::Win32.waitpid2(pid)
+		expect(status).not_to be nil
 		expect(status.first).to eq pid
-		return status.last.exitstatus if status.last.is_a? Process::Status
-		status.last
+		return status.last.exitstatus
 	end
 	it "has all version numbers" do
 		expect(SubSpawn::Win32::VERSION).not_to be nil
@@ -45,7 +45,8 @@ RSpec.describe SubSpawn::Win32 do
 			expect(file).to_not exist
 			pid = Wn.new("c:\\windows\\system32\\cmd.exe", "/c", "type NUL >> #{T}").spawn!
 			expect(pid).to be_a(Integer)
-			expect(SubSpawn::Win32.waitpid2(pid)).to eq [pid, 0]
+			status = SubSpawn::Win32.waitpid2(pid)
+			expect(status).to eq [pid, Process.status.send(:new, pid, 0, nil)]
 			expect(file).to exist
 			expect(file).to be_file
 		end

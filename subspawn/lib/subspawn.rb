@@ -10,9 +10,10 @@ elsif FFI::Platform.windows?
 else
 	raise "Unknown FFI platform"
 end
+require 'subspawn/common'
 
 module SubSpawn
-	# TODO: things to check: set $?
+	# Parse and convert the weird Ruby spawn API into something nicer
 	def self.spawn_compat(command, *command2)
 		#File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
 
@@ -238,7 +239,55 @@ module SubSpawn
 		ensure
 			tty.close unless tty.closed?
 			# MRI waits this way to ensure the process is reaped
-			if Process.waitpid(pid, Process::WNOHANG)
+			if Process.waitpid(pid, Process::WNOHANG).nil?
+				Process.detach(pid)
+			end
+		end
+	end
+
+	# the signature is weird
+	def self.popen_compat(first, second, *args)
+		if first.respond_to? :to_hash
+		else
+		end
+		#Many modes, and "-" is not supported at this time
+		# TODO: parse popen compat
+	end
+
+	def self.popen(command, mode="r", opt={}, &block)
+		#Many modes, and "-" is not supported at this time
+		outputs = {}
+		# parse, but ignore irrelevant bits
+		parsed = Internal.modestr_parse(mode) & (~(IO::TRUNC | IO::CREAT | IO::APPEND | IO::EXCL))
+		looking = if parsed & IO::WRONLY != 0
+			outputs[:in] = :pipe
+			looking = [:in]
+		elsif parsed & IO::RDWR != 0
+			outputs[:out] = :pipe
+			outputs[:in] = :pipe
+			looking = [:out, :in] # read, write, from our POV
+		else # read only
+			outputs[:out] = :pipe
+			looking = [:out]
+		end
+		# do normal spawning
+		pid, rawio = SubSpawn.spawn(command, outputs.merge(opt))
+
+		# create a proxy to close the process
+		io_proxy = looking.length == 1 ? SubSpawn::Common::ClosableIO : SubSpawn::Common::BidiMergedIOClosable
+		io = io_proxy.new(*looking.map{|x|rawio[x]}) do
+			# MRI waits this way to ensure the process is reaped
+			Process.waitpid(pid) # TODO: I think there isn't a WNOHANG here
+		end
+
+		# return or call
+		return io unless block_given?
+		begin
+			return block.call(*list)
+		ensure
+			io.close unless io.closed?
+			# MRI waits this way to ensure the process is reaped
+			if Process.waitpid(pid, Process::WNOHANG).nil?
 				Process.detach(pid)
 			end
 		end

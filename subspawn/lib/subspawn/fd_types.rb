@@ -93,16 +93,7 @@ module SubSpawn::Internal
 				@value = file
 				@mode = mode || ::File::RDONLY
 				if @mode.respond_to? :to_str
-					@mode = case @mode.to_str
-					when "w" then IO::WRONLY | IO::CREAT | IO::TRUNC
-					when "r" then IO::RDONLY
-					when "rb" then IO::RDONLY | IO::BINARY
-					when "wb" then IO::WRONLY | IO::BINARY | IO::CREAT | IO::TRUNC
-					when "r+", "w+" then IO::RDWR | IO::CREAT 
-						# TODO: all!
-					else
-						raise ArgumentError "Unknown File mode"
-					end
+					@mode = SubSpawn::Internal.modestr_parse @mode.to_str
 				end
 				@perm = perm || 0o666
 			end

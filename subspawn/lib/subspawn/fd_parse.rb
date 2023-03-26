@@ -47,6 +47,28 @@ module SubSpawn::Internal
 		end
 	end
 
+	def self.modestr_parse(str)
+		str = str.to_str
+		out = 0
+		if str.include? "b"
+			out = IO::BINARY
+			str = str.gsub("b", "")
+		end
+		if str.include? "x"
+			out = IO::EXCL
+			str = str.gsub("b", "")
+		end
+		out | case str
+		when "w" then IO::WRONLY | IO::CREAT | IO::TRUNC
+		when "r" then IO::RDONLY
+		when "r+", "w+" then IO::RDWR | IO::CREAT
+		when "a" then IO::WRONLY | IO::CREAT | IO::APPEND
+		when "a+" then IO::RDWR | IO::APPEND
+		else
+			raise ArgumentError "Unknown File mode"
+		end
+	end
+
 	# make FdSource objects of each redirection
 	def self.parse_fd_opts(fds, &settty)
 		child_lookup = {}

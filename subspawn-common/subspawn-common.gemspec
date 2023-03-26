@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require_relative "lib/subspawn/win32/version"
+require_relative "lib/subspawn/posix/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "subspawn-win32"
-  spec.version = SubSpawn::Win32::VERSION
+  spec.name = "subspawn-posix"
+  spec.version = SubSpawn::Common::VERSION
   spec.authors = ["Patrick Plenefisch"]
   spec.email = ["simonpatp@gmail.com"]
 
-  spec.summary = "SubSpawn Mid-level API for Windows systems"
-  spec.description = "A SubSpawn subproject to wrap Win32 as a mid level API"
+  spec.summary = "SubSpawn Common for all API targets"
+  spec.description = "A SubSpawn subproject to provide classes common to all mid-level and high level APIs"
   final_github = "https://github.com/byteit101/subspawn"
   spec.homepage = final_github
   spec.required_ruby_version = ">= 2.6.0"
@@ -28,8 +28,6 @@ Gem::Specification.new do |spec|
     end
   end
   spec.require_paths = ["lib"]
-
-  spec.add_dependency "subspawn-common", "~> 0.1"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

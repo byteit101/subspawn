@@ -74,6 +74,7 @@ Folders:
  - ffi-generator (build only)
  - ffi-bindings-libfixposix (gem)
  - ffi-binary-libfixposix (gem)
+ - subspawn-common (gem)
  - subspawn-posix (gem)
  - subspawn-win32 (gem)
  - subspawn (gem)
@@ -98,6 +99,10 @@ ffi-binary-libfixposix
 A compiled binary gem of libfixposix in case you do not have or do not want to use a system-installed library. Use `require 'libfixposix/binary'` to get the path.
 
 Note that to support cross-compiling, rake tasks are nonstandard. See `rake -T -a` for all options, but in essence, for local development, `rake local` will build a gem file in pkg/ as usual, that you can `gem install pkg/*.gem`. For building for publishing, try `rake cross:$TARGET` or `rake "target[x86_64-linux]" gem` (change target as appropriate). To just build the `.so` files, `rake binary` (local host) or `rake "binary[$TARGET]"` should be called.
+
+subspawn-common
+-----------
+Utilities common to all subspawn platforms and API's.
 
 subspawn-posix
 -----------

@@ -13,6 +13,11 @@ module Kernel
 	def spawn(*args)
 		SubSpawn.spawn_compat(*args)
 	end
+	alias :builtin_backtick :`
+	def `(str)
+		require 'open3'
+		Open3.capture2(str).first
+	end
 end
 
 module Process

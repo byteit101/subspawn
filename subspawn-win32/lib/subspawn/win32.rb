@@ -1,6 +1,7 @@
 require 'subspawn/win32/version'
 require 'subspawn/win32/ffi'
 require 'subspawn/win32/raw_status'
+require 'engine-hacks'
 module SubSpawn
 class SpawnError < RuntimeError
 end
@@ -430,12 +431,7 @@ class Win32
 		end
 	end
 	def self._set_status status
-		if defined? JRUBY_VERSION # accept File and Path java objects
-			require 'jruby'
-			JRuby.runtime.current_context.last_exit_status = status
-		else
-			# TODO: figure out how to set $CHILD_STATUS and $?  for CRuby and truffle ruby
-		end
+		EngineHacks.child_status = status
 		@last_status = status
 		return status.nil? ? nil : [status.pid, status]
 	end

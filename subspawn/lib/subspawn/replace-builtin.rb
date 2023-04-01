@@ -1,4 +1,7 @@
 require 'subspawn'
+require 'engine-hacks'
+
+EngineHacks.use_child_status :subspawn_child_status
 
 module Kernel
 	class << self
@@ -53,5 +56,11 @@ module Process
 				SubSpawn.detach(pid)
 			end
 		end
+	end
+end
+
+class IO
+	def self.popen(*args, &block)
+		SubSpawn.popen_compat(*args, &block)
 	end
 end

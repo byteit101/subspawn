@@ -12,8 +12,11 @@ module EngineHacks
 	end
 
 	def self.child_status= value
-		use_child_status :EngineHacksChildStatus unless defined? @symbol
-		Thread.current[@symbol] = value
+		if defined? @symbol
+			Thread.current[@symbol] = value
+		else
+			nil # not installed yet
+		end
 	end
 	
 	def self.duplex_io(read, write)

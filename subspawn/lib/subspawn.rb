@@ -14,10 +14,8 @@ require 'subspawn/common'
 
 module SubSpawn
 	# Parse and convert the weird Ruby spawn API into something nicer
-	def self.spawn_compat(command, *command2)
-		#File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
+	def self.__compat_parser(is_popen, command, command2)
 
-		# return just the pid
 		delta_env = nil
 		# check for env
 		if command.respond_to? :to_hash
@@ -32,6 +30,9 @@ module SubSpawn
 		end
 		if command.first.is_a? Array and command.first.length != 2
 			raise ArgumentError, "First argument must be an pair TODO: check this"
+		end
+		popen = if is_popen && command.length > 1
+			command.pop
 		end
 		raise ArgumentError, "Must provide a command to execute" if command.empty?
 		raise ArgumentError, "Must provide options as a hash" unless opt.is_a? Hash
@@ -55,7 +56,14 @@ module SubSpawn
 		rescue NoMethodError => e # by spec
 			raise TypeError.new(e)
 		end
-		SubSpawn.__spawn_internal(command, opt, copt).first
+		return [popen, command, opt, copt]
+	end
+
+	# Parse and convert the weird Ruby spawn API into something nicer
+	def self.spawn_compat(command, *command2)
+		#File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
+
+		__spawn_internal(*__compat_parser(false, command, command2)[1..-1]).first
 	end
 	# TODO: accept block mode?
 	def self.spawn(command, opt={})
@@ -245,17 +253,18 @@ module SubSpawn
 		end
 	end
 
-	# the signature is weird
-	def self.popen_compat(first, second, *args)
-		if first.respond_to? :to_hash
-		else
-		end
-		#Many modes, and "-" is not supported at this time
-		# TODO: parse popen compat
-	end
-
 	def self.popen(command, mode="r", opt={}, &block)
 		#Many modes, and "-" is not supported at this time
+		__popen_internal(command, mode, opt, {}, &block)
+	end
+	def self.popen_compat(command, *command2, &block)
+		#Many modes, and "-" is not supported at this time
+		mode, command, opt, copt = __compat_parser(true, command, command2)
+		mode ||= "r"
+		__popen_internal(command, mode, opt, copt, &block)
+	end
+	#Many modes, and "-" is not supported at this time
+	def self.__popen_internal(command, mode, opt, copt, &block)
 		outputs = {}
 		# parse, but ignore irrelevant bits
 		parsed = Internal.modestr_parse(mode) & (~(IO::TRUNC | IO::CREAT | IO::APPEND | IO::EXCL))
@@ -270,8 +279,8 @@ module SubSpawn
 			outputs[:out] = :pipe
 			looking = [:out]
 		end
-		# do normal spawning
-		pid, rawio = SubSpawn.spawn(command, outputs.merge(opt))
+		# do normal spawning. Note: we only chose the internal spawn for popen_compat
+		pid, rawio = __spawn_internal(command, outputs.merge(opt), copt)
 
 		# create a proxy to close the process
 		io_proxy = looking.length == 1 ? SubSpawn::Common::ClosableIO : SubSpawn::Common::BidiMergedIOClosable
@@ -283,7 +292,7 @@ module SubSpawn
 		# return or call
 		return io unless block_given?
 		begin
-			return block.call(*list)
+			return yield(io)
 		ensure
 			io.close unless io.closed?
 			# MRI waits this way to ensure the process is reaped
@@ -333,6 +342,7 @@ module SubSpawn
 	def self.detach(pid)
 		Thread.new do
 			pid, status = *SubSpawn.waitpid2(pid)
+			# TODO: ensure this loop isn't necessary
 			# while pid.nil?
 			# 	sleep 0.01
 			# 	pid, status = *SubSpawn.waitpid2(pid)

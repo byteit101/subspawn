@@ -109,37 +109,31 @@ module SubSpawn::Common
 		end
 	end
 
-	class BidiMergedIOClosable < BidiMergedIO
-		def initialize(read, write, &block)
-			super
-			@closer= block
-		end
-
-		def close
-			super
-			@closer.call
+	class BidiMergedIOClosable
+		def self.new(read, write, &closer)
+			require 'engine-hacks'
+			EngineHacks.duplex_io(read, write).tap do |io|
+				class << io
+					alias :__original_close :close
+				end
+				underlying.send( :define_singleton_method, :close) do
+					__original_close
+					closer.call
+				end
+			end
 		end
 	end
 
-	class ClosableIO < IO
-		def initialize(underlying, &block)
-			@base = underlying
-			@closer = block
-		end
-
-		(BidiMergedIO::READS + BidiMergedIO::WRITES).uniq.each do |meth|
-			define_method(meth) do |*args|
-				@base.send(meth, *args)
+	class ClosableIO
+		def self.new(underlying, &closer)
+			class << underlying
+				alias :__original_close :close
 			end
-		end
-
-		def to_io
-			self
-		end
-
-		def close
-			@base.close
-			@closer.call
+			underlying.send( :define_singleton_method, :close) do
+				__original_close
+				closer.call
+			end
+			underlying
 		end
 	end
 end

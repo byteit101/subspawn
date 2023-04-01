@@ -191,7 +191,11 @@ class Win32
 						raise SystemCallError.new("Spawn Error: CreateProcess: #{self.class.errno}", self.class.errno[:win])
 						# TODO: come up with a better errno
 					end
-					W.CloseHandle(proc_info.hProcess)
+					# Don't close the handle now, but save it in a thread-local for waitpid
+					# in case it's a quick exit
+					#W.CloseHandle(proc_info.hProcess)
+					Thread.current[:subspawn_win32hndl] = LazyHndl.new(proc_info.dwProcessId, proc_info.hProcess)
+
 					W.CloseHandle(proc_info.hThread)
 					# being a spawn clone, we don't normally expose the thread, but assign it if anyone wants it
 					@out_thread = proc_info.dwThreadId
@@ -385,8 +389,15 @@ class Win32
 		# TODO: Think that through
 		raise SubSpawn::UnimplementedError("PID <= 0 not yet implemented in subspawn-win32") if pid <= 0
 
-		# TODO: process_limited_information maybe?
-		hndl = W.OpenProcess(W::PROCESS_QUERY_INFORMATION, false, pid)
+		# TODO: allow cross-thread support
+		last = Thread.current[:subspawn_win32hndl]
+		hndl = if last.nil? or last.pid != pid
+			# TODO: process_limited_information maybe?
+			W.OpenProcess(W::PROCESS_QUERY_INFORMATION, false, pid)
+			Thread.current[:subspawn_win32hndl] = nil
+		else
+			past.hndl
+		end
 		raise Errno::ECHILD.new("No child processes") if hndl == 0 || hndl == W::INVALID_HANDLE_VALUE
 
 		timeout = (options & Process::WNOHANG) != 0 ? 0 : W::INFINITE
@@ -564,3 +575,5 @@ class Win32
 
 end
 end
+
+require 'subspawn/win32/lazy-hndl'

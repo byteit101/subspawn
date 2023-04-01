@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require_relative "lib/subspawn/common/version"
+require_relative "lib/engine-hacks/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "subspawn-common"
-  spec.version = SubSpawn::Common::VERSION
+  spec.name = "engine-hacks"
+  spec.version = EngineHacks::VERSION
   spec.authors = ["Patrick Plenefisch"]
   spec.email = ["simonpatp@gmail.com"]
 
-  spec.summary = "SubSpawn Common for all API targets"
-  spec.description = "A SubSpawn subproject to provide classes common to all mid-level and high level APIs"
+  spec.summary = "Engine-specific hacks to enable implement spawn in Ruby"
+  spec.description = "A SubSpawn subproject to provide c/java extensions to modify non-ruby-modifiable classes necessary to implementing SubSpawn, or any other spawn/popen API in pure Ruby"
   final_github = "https://github.com/byteit101/subspawn"
   spec.homepage = final_github
   spec.required_ruby_version = ">= 2.6.0"
@@ -28,6 +28,13 @@ Gem::Specification.new do |spec|
     end
   end
   spec.require_paths = ["lib"]
+
+  if RUBY_PLATFORM =~ /java/
+    spec.platform = "java"
+  else
+    spec.platform = Gem::Platform::RUBY
+    spec.extensions = ["ext/engine_hacks/extconf.rb"]
+  end
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

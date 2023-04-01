@@ -392,11 +392,11 @@ class Win32
 		# TODO: allow cross-thread support
 		last = Thread.current[:subspawn_win32hndl]
 		hndl = if last.nil? or last.pid != pid
+			last = Thread.current[:subspawn_win32hndl] = nil
 			# TODO: process_limited_information maybe?
 			W.OpenProcess(W::PROCESS_QUERY_INFORMATION, false, pid)
-			Thread.current[:subspawn_win32hndl] = nil
 		else
-			past.hndl
+			last.hndl
 		end
 		raise Errno::ECHILD.new("No child processes") if hndl == 0 || hndl == W::INVALID_HANDLE_VALUE
 
@@ -419,7 +419,7 @@ class Win32
 				end
 			end)
 		ensure
-			W.CloseHandle(hndl)
+			W.CloseHandle(hndl) if last.nil?
 		end
 	end
 	def self.last_status

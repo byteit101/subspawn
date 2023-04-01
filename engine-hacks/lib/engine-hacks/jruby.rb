@@ -6,7 +6,7 @@ module EngineHacks
 		nil
 	end
 
-	def self.child_status= value
+	def self.child_status= status
 		require 'jruby'
 		JRuby.runtime.current_context.last_exit_status = status
 	end

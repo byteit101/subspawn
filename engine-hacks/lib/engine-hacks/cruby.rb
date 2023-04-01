@@ -8,7 +8,7 @@ module EngineHacks
 
 	def self.use_child_status symbol
 		@symbol = symbol.to_sym
-		MRI::install_status! symbol
+		MRI.install_status! symbol
 	end
 
 	def self.child_status= value
@@ -17,6 +17,8 @@ module EngineHacks
 	end
 	
 	def self.duplex_io(read, write)
-		
+		raise ArgumentError.new("Read argument must be IO") unless read.is_a? IO
+		raise ArgumentError.new("Write argument must be IO") unless write.is_a? IO
+		MRI.join_io(read, write)
 	end
 end

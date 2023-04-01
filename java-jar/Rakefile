@@ -6,6 +6,7 @@ task :build do
 	cp_r '../ffi-bindings-libfixposix/lib', 'target'
 	cp_r '../ci-output/lib', 'target/lib/libfixposix/binary'
 	cp_r '../ffi-binary-libfixposix/lib', 'target'
+	cp_r '../engine-hacks/lib', 'target'
 	cp_r '../subspawn-common/lib', 'target'
 	cp_r '../subspawn-posix/lib', 'target'
 	cp_r '../subspawn/lib', 'target'

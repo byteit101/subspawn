@@ -39,6 +39,9 @@ task "build" do
 	cd "ffi-binary-libfixposix" do
 		sh 'rake local'
 	end
+	cd "engine-hacks" do
+		sh 'rake build'
+	end
 	cd "subspawn-common" do
 		sh 'rake build'
 	end
@@ -65,6 +68,9 @@ task "clean" do
 		sh 'rake clobber'
 	end
 	cd "ffi-binary-libfixposix" do
+		sh 'rake clobber'
+	end
+	cd "engine-hacks" do
 		sh 'rake clobber'
 	end
 	cd "subspawn-common" do
@@ -129,7 +135,7 @@ task "ci-run" => %w{clean generate:ffi build} do
 	end
 	unless RbConfig::CONFIG["target_os"].include? "darwin"
 		# now copy the other artifacts
-		%w{ffi-bindings-libfixposix subspawn-common subspawn-posix subspawn-win32 subspawn}.each do |folder|
+		%w{ffi-bindings-libfixposix engine-hacks subspawn-common subspawn-posix subspawn-win32 subspawn}.each do |folder|
 			cp Dir["#{folder}/pkg/*.gem"], "ci-output/pkg/" 
 		end
 	end

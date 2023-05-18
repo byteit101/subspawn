@@ -305,7 +305,7 @@ module SubSpawn
 	# Windows doesn't like mixing and matching who is spawning and who is waiting, so use
 	# subspawn.wait* if you used subspawn.spawn*, while using process.wait* if you used Process.spawn*
 	# though if you replace process, then it's a moot point
-	if SubSpawn::Platform.method(:waitpid2)
+	if SubSpawn::Platform.method_defined? :waitpid2
 		def self.wait(*args)
 			waitpid *args
 		end

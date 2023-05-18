@@ -120,6 +120,15 @@ jobs:
           ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
           bundler-cache: true
 
+      - name: Build engine-hacks
+        run: bundle install && rake install
+        working-directory: ./engine-hacks
+
+      - name: Build subspawn-common
+        run: bundle install && rake install
+        working-directory: ./subspawn-common
+
+
       - name: Install dependencies
         run: bundle install
         working-directory: ./subspawn-win32

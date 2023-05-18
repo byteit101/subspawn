@@ -3,4 +3,5 @@
 --require spec_helper
 -I ../ffi-binary-libfixposix/lib
 -I ../subspawn-posix/lib
+-I ../subspawn-common/lib
 -I ../ffi-bindings-libfixposix/lib

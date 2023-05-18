@@ -1,4 +1,4 @@
-require 'engine-hacks/engine_hacks'
+require 'engine_hacks/engine_hacks'
 require 'English'
 
 # TODO: this doesn't actually work

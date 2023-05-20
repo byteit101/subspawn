@@ -13,7 +13,7 @@ RSpec.describe SubSpawn do
 			:platform => {
 				:libfixposix=>{
 					:binary=>{
-						:gem=>"0.5.1.0",
+						:gem=>"0.5.1.1",
 						:interface=>"0.5.1",
 						:library=>"0.5.1"
 					},

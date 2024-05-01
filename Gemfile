@@ -10,3 +10,4 @@ gem "ffi", "~> 1.0" # for everything
 gem "colorize" # for ffi_gen debugging output
 gem "pry" # for ffi_gen debugging output
 gem "rake-compiler", "~> 1.2" # for engine-hacks extension compilation
+gem "racc", "~> 1.7"

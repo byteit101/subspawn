@@ -29,7 +29,7 @@ Gem::Specification.new do |spec|
   end
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "subspawn-common", "~> 0.1"
+  spec.add_dependency "subspawn-common", "~> 0.2"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html

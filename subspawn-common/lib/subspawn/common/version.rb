@@ -2,6 +2,6 @@
 
 module SubSpawn
 	module Common
-		VERSION = "0.1.1"
+		VERSION = "0.2.0.pre1"
 	end
 end

@@ -8,7 +8,7 @@ require 'bundler'
 # currently supported binaries for building
 # [ruby-platform, gcc-target, docker-image-name]
 targets = [
-	%w{x86-linux i686-linux-gnu linux-x86},
+	%w{x86-linux i686-linux-gnu linux-i386},
 	%w{x86_64-linux x86_64-linux-gnu linux-x64},
 	%w{arm64-linux aarch64-linux-gnu linux-arm64},
 	%w{armv7-linux armv7-linux-gnu linux-armv7},
@@ -17,8 +17,8 @@ targets = [
 	%w{ppc64le-linux ppc64le-linux-gnu linux-ppc64le},
 	%w{riscv32-linux riscv32-linux-gnu linux-riscv32},
 	%w{riscv64-linux riscv64-linux-gnu linux-riscv64},
-	%w{x86_64-darwin x86_64-apple-darwin}, # UNTESTED
-	%w{arm64-darwin arm64-apple-darwin}, # UNTESTED
+	%w{x86_64-darwin x86_64-apple-darwin},
+	%w{arm64-darwin arm64-apple-darwin},
 	%w{x86-freebsd i386-freebsd9 i386-freebsd9},
 	%w{x86_64-freebsd x86_64-freebsd9 x86_64-freebsd9},
 ]
@@ -47,7 +47,7 @@ task :cross, [:target] do |_, args|
 	mkdir_p "tmp/#{platform}/conf"
 	mkdir_p "tmp/#{platform}/out"
 	scriptsh = "tmp/#{platform}/build.sh"
-	fix32bit = platform == "x86-linux" ? "LD=ld" : "" # https://github.com/dockcross/dockcross/issues/735
+	fix32bit = ""
 	File.write(scriptsh, <<~SCRIPT)
 		#!/bin/sh
 		echo $CROSS_TRIPLE "---" #{host}

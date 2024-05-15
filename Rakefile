@@ -160,13 +160,14 @@ task "ci-subset-run" => %w{clean generate:ffi buildlfp} do
 			raise "BINARY_SET env not set, must be set: '#{ENV['BINARY_SET']}'"
 		else
 			configs = {
-				linux: %w{x86 x86_64 armv6 armv7 arm64 riscv32 riscv64},
+				linux: %w{x86 x86_64 armv6 armv7 arm64 riscv32 riscv64 ppc64le s390x},
 				freebsd: %w{x86 x86_64}
 			}
 			subtargets = {
 				intel: %w{x86 x86_64},
 				arm: %w{armv6 armv7 arm64},
 				risc: %w{riscv32 riscv64},
+				odd1: %w{ppc64le s390x},
 			}
 			fore, aft = *ENV["BINARY_SET"].split("-")
 			os = fore.to_sym

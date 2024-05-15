@@ -65,9 +65,9 @@ task :cross, [:target] do |_, args|
 	chmod 0755, scriptsh
 	cd File.dirname(__dir__) do
 		tmp = if File.exist? "binary-builders/dockcross-#{docker}"
-			system(%Q{binary-builders/dockcross-#{docker} ffi-binary-libfixposix/#{scriptsh}})
+			sh(%Q{binary-builders/dockcross-#{docker} ffi-binary-libfixposix/#{scriptsh}})
 		else
-			system(%Q{binary-builders/manual-#{docker} ffi-binary-libfixposix/#{scriptsh}})
+			sh(%Q{binary-builders/manual-#{docker} ffi-binary-libfixposix/#{scriptsh}})
 		end
 		raise "Error! #{$?.inspect} #{$?} #{tmp}" if $? != 0
 	end

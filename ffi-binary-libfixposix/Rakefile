@@ -64,12 +64,12 @@ task :cross, [:target] do |_, args|
 	SCRIPT
 	chmod 0755, scriptsh
 	cd File.dirname(__dir__) do
-		if File.exist? "binary-builders/dockcross-#{docker}"
+		tmp = if File.exist? "binary-builders/dockcross-#{docker}"
 			system(%Q{binary-builders/dockcross-#{docker} ffi-binary-libfixposix/#{scriptsh}})
 		else
 			system(%Q{binary-builders/manual-#{docker} ffi-binary-libfixposix/#{scriptsh}})
 		end
-		raise "Error!" if $? != 0
+		raise "Error! #{$?.inspect} #{$?} #{tmp}" if $? != 0
 	end
 	suffix = host.include?("darwin") ? "dylib" : "so"
 	dest =  "../ci-output/lib/#{platform}/libfixposix.#{suffix}"

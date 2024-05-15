@@ -34,8 +34,7 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
         </tr>
         <tr>
             <td>Windows</td>
-            <td>Accepting pull requests!</td>
-            <td>Accepting pull requests!</td>
+            <td colspan=2 align=center><tt>subspawn-win32</tt></td>
         </tr>
         <tr>
             <td>JVM/Jar</td>
@@ -46,16 +45,26 @@ The primary feature of SubSpawn is the ability to control advanced attributes of
 
 Installation
 -----------
-For now, only POSIX systems are supported:
+For now, subspawn uses hard dependencies, but this may change.
+
+Using JRuby 9.4 or later? A compatible version of SubSpawn is already installed!
+
+For POSIX systems (MacOS, Linux, etc...):
 ```
 $ gem install subspawn subspawn-posix
+```
 
+For Windows systems:
+```
+$ gem install subspawn subspawn-win32
+```
+
+Then:
+```rb
 require 'subspawn'
 # or, to replace the built in spawn methods:
 # require 'subspawn/replace'
 ```
-
-Using JRuby? Subspawn is already installed!
 
 What is in this repository
 -------
@@ -64,8 +73,11 @@ Folders:
  - libfixposix (build only, subrepository, for ffi-generator)
  - ffi-generator (build only)
  - ffi-bindings-libfixposix (gem)
- - ffi-binary-libfixposix (gem)
+ - ffi-binary-libfixposix (native gem)
+ - engine-hacks (native gem)
+ - subspawn-common (gem)
  - subspawn-posix (gem)
+ - subspawn-win32 (gem)
  - subspawn (gem)
  - jruby-jar (gem/jar building utilities)
 
@@ -89,9 +101,23 @@ A compiled binary gem of libfixposix in case you do not have or do not want to u
 
 Note that to support cross-compiling, rake tasks are nonstandard. See `rake -T -a` for all options, but in essence, for local development, `rake local` will build a gem file in pkg/ as usual, that you can `gem install pkg/*.gem`. For building for publishing, try `rake cross:$TARGET` or `rake "target[x86_64-linux]" gem` (change target as appropriate). To just build the `.so` files, `rake binary` (local host) or `rake "binary[$TARGET]"` should be called.
 
+engine-hacks
+-----------
+Ruby engine-specific hacks. Currently used to set `$?` in a platform-independent manner, as well as to make IO.popen "fake duplex" IO objects. C extension for MRI and TruffleRuby, JI for JRuby. Entirely independent of SubSpawn, and can be used externally.
+
+subspawn-common
+-----------
+Utilities common to all subspawn platforms and API's.
+
 subspawn-posix
 -----------
 The mid-level API for Unixy machines. Exposes all the capabilities of libfixposix with none of the hassle of C or FFI. Look at the included RBS file for all methods and types. Also includes minimal PTY opening helper.
+
+subspawn-win32
+-----------
+The mid-level API for Windows machines. Win32 API's are exposed via FFI, then regularized via the mid-level API, like subspawn-posix. Also includes an early PTY <-> ConPTY translation layer. Yes, you heard that right, PTY.open/PTY.spawn on Windows! (Require [ConPTY from Windows 10 1803](https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/) or later)
+
+Note: PTY's currently work best on CRuby. JRuby support is being worked on, this gem will eventually ship with JRuby once this is fixed.
 
 subspawn
 -----------
@@ -101,9 +127,10 @@ The unified high-level API for all Ruby platforms. Also includes post-launch uti
 Roadmap
 ------------
 
- * 0.1 - intial release
- * 0.2 - windows & install-time builds
- * 0.3 - better validation/errors
+ * 0.1 - intial release (DONE)
+ * 0.2 - windows (WIP, everything except PTY's should work right now though)
+ * 0.3 - install-time builds
+ * 0.4 - better validation/errors
 
 Please note that SubSpawn is still in its infancy and is being actively developed.
 
@@ -113,10 +140,11 @@ API guarantees:
  * subspawn-`$PLATFORM` may change from 0.1 to 0.2, etc
  * subspawn (high-level) will otherwise use semantic versioning
 
-
 # Development
 
 After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.
+
+To build the binary locally for development (highly recommended): `cd ffi-binary-libfixposix && rake local`
 
 To install these gem onto your local machine, run `bundle exec rake build` and install all the gems with `gem install */pkg/*.gem`.
 
@@ -125,8 +153,9 @@ Test by integrating into JRuby. Notable tests:
  * io/console. check out and run `TESTOPTS="--verbose" jruby -S rake test`
  * rspec tests. check out jruby and run `bin/jruby -S rake spec:ruby`, looking for spawn or PTY errors 
 
-For local JRby integration testing, consider running `rerun --no-notify --ignore 'java-jar/*' 'cd java-jar && rake'` after you export `JRUBY_DIR` to the path to your jruby source checkout
+For local JRuby integration testing, consider running `rerun --no-notify --ignore 'java-jar/*' 'cd java-jar && rake'` after you export `JRUBY_DIR` to the path to your jruby source checkout
 
+For unit testing, `subspawn` and `subspawn-posix` have rspec tests that run on MacOS & Linux, while `subspawn-win32` has rspec tests that run on Windows.
 
 ## Contributing
 

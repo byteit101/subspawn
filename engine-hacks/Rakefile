@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+require "bundler/gem_tasks"
+require "rspec/core/rake_task"
+
+RSpec::Core::RakeTask.new(:spec)
+
+
+require 'rake/extensiontask'
+
+Rake::ExtensionTask.new "engine_hacks" do |ext|
+	ext.lib_dir = "lib/engine-hacks"
+end
+
+
+task default: :build

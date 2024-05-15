@@ -1,0 +1,15 @@
+module EngineHacks
+	# Makes $? use the thread-local variable named
+	# Returns nil if thread-local hack not necessary, the 
+	# Symbol otherwise
+	def self.use_child_status: (String | Symbol) -> ?Symbol
+	                         
+	# Sets $? to the given object. returns nil if use_child_status hasn't
+	# been called yet
+	def self.child_status=: (Object) -> ?Object
+	                      
+	# Returns an IO that may be either of the input arguments or a new
+	# IO that is a duplex IO where .read calls read.read, and .write calls
+	# write.write, etc. 
+	def self.duplex_io: (IO read, IO write) -> IO
+end

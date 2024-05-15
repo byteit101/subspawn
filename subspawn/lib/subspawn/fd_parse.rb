@@ -4,10 +4,11 @@ require_relative './pipes'
 
 module SubSpawn::Internal
 	# argument value to int (or :tty)
-	def self.parse_fd(fd, allow_pty=false)
+	def self.parse_fd(fd, allow_pty=false, dests: nil)
 		# fd = if fd.respond_to? :to_path
 		# fd = if fd.respond_to? :to_file
 		# fd = if fd.respond_to? :to_file
+		fd = split_parse(fd, dests) if dests != nil and fd.respond_to? :underlying_write_io
 		case fd
 		when Integer then fd
 		when IO then fd.fileno
@@ -21,6 +22,14 @@ module SubSpawn::Internal
 				raise ArgumentError, "Unknown FD type: #{fd.inspect}"
 			end
 		end
+	end
+
+	# TODO: does this support [:in, :out, :pty] => bidi as well as :child?
+	# Only on windows, we have "split IO" to fake a bidirectional pipe for PTYs
+	# This picks the right underlying IO
+	def self.split_parse(fd, d)
+		mode = guess_mode(d)
+		fd.send(:"underlying_#{mode}_io")
 	end
 
 	# mode conversion
@@ -38,11 +47,34 @@ module SubSpawn::Internal
 		end
 	end
 
+	def self.modestr_parse(str)
+		str = str.to_str
+		out = 0
+		if str.include? "b"
+			out = IO::BINARY
+			str = str.gsub("b", "")
+		end
+		if str.include? "x"
+			out = IO::EXCL
+			str = str.gsub("b", "")
+		end
+		out | case str
+		when "w" then IO::WRONLY | IO::CREAT | IO::TRUNC
+		when "r" then IO::RDONLY
+		when "r+", "w+" then IO::RDWR | IO::CREAT
+		when "a" then IO::WRONLY | IO::CREAT | IO::APPEND
+		when "a+" then IO::RDWR | IO::APPEND
+		else
+			raise ArgumentError "Unknown File mode"
+		end
+	end
+
 	# make FdSource objects of each redirection
 	def self.parse_fd_opts(fds, &settty)
 		child_lookup = {}
 		fds.map do |dests, src|
 			d = dests.map{|x| parse_fd(x, true)} # TODO: configurable
+			src = src.to_io if src.respond_to? :to_io
 			src = case src
 			when Array
 				case src.first
@@ -54,7 +86,7 @@ module SubSpawn::Internal
 					raise ArgumentError, "Invalid :child FD source specification" unless src.length == 2
 					# {a => c, b => [child, a]} is the same as {[a, b] => c}
 					# so we can transform the former into the latter
-					newfd = parse_fd(src.last)
+					newfd = parse_fd(src.last, dests: d)
 					# TODO: this isn't an error, create a new one
 					raise ArgumentError, "Invalid :child FD source specification" unless child_lookup[newfd]
 					child_lookup[newfd].tap{|child|
@@ -81,7 +113,7 @@ module SubSpawn::Internal
 					settty.call(src.path)
 					d.delete(:tty)
 				end
-				FdSource::Basic.new d, parse_fd(src)
+				FdSource::Basic.new d, parse_fd(src, dests: d)
 			end
 			# save redirected fds so we can sneak a child reference in
 			src.tap{|x| d.each{|c|

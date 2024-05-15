@@ -48,6 +48,92 @@ jobs:
           path: ci-output/pkg/
           if-no-files-found: error
 
+  build-fat-java:
+    needs: build-core
+    runs-on:  ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.117.0
+        with:
+          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+          bundler-cache: true
+
+      # grab mac and linux libraries that were built in the last section
+      - uses: actions/download-artifact@v3
+        with:
+          name: shared-libraries
+          path: ci-output/lib/
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Build binary & Gems
+        run: bundle exec rake ci-java
+
+      - uses: actions/upload-artifact@v3
+        name: Attach gems
+        with:
+          name: all-gems
+          path: ci-output/pkg/
+          if-no-files-found: error
+
+
+  specs-posix:
+    runs-on:  ubuntu-latest # TODO: macos too?
+
+    # less doesn't work (and thus tests fails) unless TERM is set. Not set on GHA by default
+    env:
+      TERM: xterm
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.117.0
+        with:
+          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+          bundler-cache: true
+
+      - name: Install Less
+        run: sudo apt update && sudo apt install -y less
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Build binary & Gems & Run tests
+        run: bundle exec rake ci-test
+
+  specs-win32:
+    runs-on:  windows-latest # TODO: macos too?
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1.117.0
+        with:
+          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+          bundler-cache: true
+
+      - name: Build engine-hacks
+        run: bundle install && rake install
+        working-directory: ./engine-hacks
+
+      - name: Build subspawn-common
+        run: bundle install && rake install
+        working-directory: ./subspawn-common
+
+
+      - name: Install dependencies
+        run: bundle install
+        working-directory: ./subspawn-win32
+
+      - name: Test Gem
+        run: bundle exec rspec
+        working-directory: ./subspawn-win32
+
 # TODO:
 #https://github.com/kouki-h/linux_cross_openbsd/blob/main/Makefile
 #https://developer.apple.com/documentation/apple-silicon/building-a-universal-macos-binary

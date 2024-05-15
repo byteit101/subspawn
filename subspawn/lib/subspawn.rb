@@ -5,17 +5,17 @@ if FFI::Platform.unix?
 	require 'subspawn/posix'
 	SubSpawn::Platform = SubSpawn::POSIX
 elsif FFI::Platform.windows?
-	raise "SubSpawn Win32 is not yet implemented"
+	require 'subspawn/win32'
+	SubSpawn::Platform = SubSpawn::Win32
 else
 	raise "Unknown FFI platform"
 end
+require 'subspawn/common'
 
 module SubSpawn
-	# TODO: things to check: set $?
-	def self.spawn_compat(command, *command2)
-		#File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
+	# Parse and convert the weird Ruby spawn API into something nicer
+	def self.__compat_parser(is_popen, command, command2)
 
-		# return just the pid
 		delta_env = nil
 		# check for env
 		if command.respond_to? :to_hash
@@ -30,6 +30,9 @@ module SubSpawn
 		end
 		if command.first.is_a? Array and command.first.length != 2
 			raise ArgumentError, "First argument must be an pair TODO: check this"
+		end
+		popen = if is_popen && command.length > 1
+			command.pop
 		end
 		raise ArgumentError, "Must provide a command to execute" if command.empty?
 		raise ArgumentError, "Must provide options as a hash" unless opt.is_a? Hash
@@ -53,7 +56,14 @@ module SubSpawn
 		rescue NoMethodError => e # by spec
 			raise TypeError.new(e)
 		end
-		SubSpawn.__spawn_internal(command, opt, copt).first
+		return [popen, command, opt, copt]
+	end
+
+	# Parse and convert the weird Ruby spawn API into something nicer
+	def self.spawn_compat(command, *command2)
+		#File.write('/tmp/spawn.trace', [command, *command2].inspect + "\n", mode: 'a+')
+
+		__spawn_internal(*__compat_parser(false, command, command2)[1..-1]).first
 	end
 	# TODO: accept block mode?
 	def self.spawn(command, opt={})
@@ -107,7 +117,11 @@ module SubSpawn
 					#base.sid!# TODO: yes? no?
 				end
 			when :sid
-				base.sid! if value
+				if base.respond_to? :sid!
+					base.sid! if value
+				else
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'sid'"
+				end
 			when :env
 				if env_opts[:deltas]
 					warn "Provided multiple ENV options"
@@ -127,19 +141,44 @@ module SubSpawn
 				raise TypeError, "pgroup must be boolean or integral" if value.is_a? Symbol
 				base.pgroup = value == true ? 0 : value if value
 			when :signal_mask # TODO: signal_default
-				base.signal_mask(value)
+				if base.respond_to? :signal_mask
+					base.signal_mask(value)
+				else
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'signal_mask'"
+				end
 			when /rlimit_(.*)/ # P.s
+				unless base.respond_to? :rlimit
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'rlimit_*'"
+				else	
+					name = $1
+					keys = [value].flatten
+					base.rlimit(name, *keys)
+				end
+			when /w32_(.*)/ # NEW
 				name = $1
-				keys = [value].flatten
-				base.rlimit(name, *keys)
+				raise ArgumentError, "Unknown win32 argument: #{name}" unless %w{desktop title show_window window_pos window_size console_size window_fill start_flags}.include? name
+				unless base.respond_to? :name
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'w32_#{$1}'"
+				else	
+					base.send(name, *value)
+				end
 			when :rlimit # NEW?
 				raise ArgumentError, "rlimit as a hash must be a hash" unless value.respond_to? :to_h
-				value.to_h.each do |key, values|
-					base.rlimit(key, *[values].flatten)
+
+				unless base.respond_to? :rlimit
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'rlimit_*'"
+				else
+					value.to_h.each do |key, values|
+						base.rlimit(key, *[values].flatten)
+					end
 				end
 			when :umask # P.s
 				raise ArgumentError, "umask must be numeric" unless value.is_a? Integer
-				base.umask = value
+				unless base.respond_to? :umask
+					warn "SubSpawn Platform (#{base.class}) doesn't support 'umask'"
+				else
+					base.umask = value
+				end
 			when :unsetenv_others # P.s
 				env_opts[:only] = !!value
 				env_opts[:set] ||= !!value
@@ -208,9 +247,110 @@ module SubSpawn
 		ensure
 			tty.close unless tty.closed?
 			# MRI waits this way to ensure the process is reaped
-			if Process.waitpid(pid, Process::WNOHANG)
+			if Process.waitpid(pid, Process::WNOHANG).nil?
 				Process.detach(pid)
 			end
+		end
+	end
+
+	def self.popen(command, mode="r", opt={}, &block)
+		#Many modes, and "-" is not supported at this time
+		__popen_internal(command, mode, opt, {}, &block)
+	end
+	def self.popen_compat(command, *command2, &block)
+		#Many modes, and "-" is not supported at this time
+		mode, command, opt, copt = __compat_parser(true, command, command2)
+		mode ||= "r"
+		__popen_internal(command, mode, opt, copt, &block)
+	end
+	#Many modes, and "-" is not supported at this time
+	def self.__popen_internal(command, mode, opt, copt, &block)
+		outputs = {}
+		# parse, but ignore irrelevant bits
+		parsed = Internal.modestr_parse(mode) & (~(IO::TRUNC | IO::CREAT | IO::APPEND | IO::EXCL))
+		looking = if parsed & IO::WRONLY != 0
+			outputs[:in] = :pipe
+			looking = [:in]
+		elsif parsed & IO::RDWR != 0
+			outputs[:out] = :pipe
+			outputs[:in] = :pipe
+			looking = [:out, :in] # read, write, from our POV
+		else # read only
+			outputs[:out] = :pipe
+			looking = [:out]
+		end
+		# do normal spawning. Note: we only chose the internal spawn for popen_compat
+		pid, rawio = __spawn_internal(command, outputs.merge(opt), copt)
+
+		# create a proxy to close the process
+		io_proxy = looking.length == 1 ? SubSpawn::Common::ClosableIO : SubSpawn::Common::BidiMergedIOClosable
+		io = io_proxy.new(*looking.map{|x|rawio[x]}) do
+			# MRI waits this way to ensure the process is reaped
+			Process.waitpid(pid) # TODO: I think there isn't a WNOHANG here
+		end
+
+		# return or call
+		return io unless block_given?
+		begin
+			return yield(io)
+		ensure
+			io.close unless io.closed?
+			# MRI waits this way to ensure the process is reaped
+			if Process.waitpid(pid, Process::WNOHANG).nil?
+				Process.detach(pid)
+			end
+		end
+	end
+
+	# Windows doesn't like mixing and matching who is spawning and who is waiting, so use
+	# subspawn.wait* if you used subspawn.spawn*, while using process.wait* if you used Process.spawn*
+	# though if you replace process, then it's a moot point
+	if SubSpawn::Platform.method_defined? :waitpid2
+		def self.wait(*args)
+			waitpid *args
+		end
+		def self.waitpid(*args)
+			waitpid2(*args)&.first
+		end
+		def self.wait2(*args)
+			waitpid2 *args
+		end
+		def self.waitpid2(*args)
+			SubSpawn::Platform.waitpid2 *args
+		end
+		def self.last_status
+			SubSpawn::Platform.last_status
+		end
+	else
+		def self.wait(*args)
+			Process.wait *args
+		end
+		def self.waitpid(*args)
+			Process.waitpid *args
+		end
+		def self.wait2(*args)
+			Process.wait2 *args
+		end
+		def self.waitpid2(*args)
+			Process.waitpid2 *args
+		end
+		def self.last_status
+			Process.last_status
+		end
+	end
+
+	def self.detach(pid)
+		Thread.new do
+			pid, status = *SubSpawn.waitpid2(pid)
+			# TODO: ensure this loop isn't necessary
+			# while pid.nil?
+			# 	sleep 0.01
+			# 	pid, status = *SubSpawn.waitpid2(pid)
+			# end
+			status
+		end.tap do |thr|
+			thr[:pid] = pid
+			# TODO: does thread.pid need to exist?
 		end
 	end
 

@@ -127,7 +127,6 @@ task :binary, [:target] do |_, args|
 		# cross compiling mac
 		puts "Detected mac cross compiling"
 		recipe.configure_options += ["--target=arm64-apple-darwin", "CFLAGS=-target arm64-apple-darwin -arch arm64", "LDFLAGS=-target arm64-apple-darwin "] # why is it different? idk...
-		mactest = true
 	end
 	puts "Searching for host '#{host}'..."
 

@@ -120,7 +120,6 @@ task :binary, [:target] do |_, args|
 	host = args[:target] || saved_target_arg || recipe.original_host.sub(/redhat\-/,"")
 	recipe.host = host if host
 	host = host || RbConfig.expand("$(target_cpu)-$(target_os)") # mac os doesn't have it?
-	mactest = false
 	if host.match(/^(.*darwin)[\d.]+$/)
 		host = $1 # trim off darwin19 to just darwin
 	end
@@ -128,7 +127,6 @@ task :binary, [:target] do |_, args|
 		# cross compiling mac
 		puts "Detected mac cross compiling"
 		recipe.configure_options += ["--target=arm64-apple-darwin", "CFLAGS=-target arm64-apple-darwin -arch arm64", "LDFLAGS=-target arm64-apple-darwin "] # why is it different? idk...
-		mactest = true
 	end
 	puts "Searching for host '#{host}'..."
 
@@ -150,9 +148,6 @@ task :binary, [:target] do |_, args|
 		verbose: true
 	)
 
-	if mactest
-		sh "file #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}")}"
-	end
 	# ~140k -> ~40k
 	sh "strip #{suffix == "dylib" ? "-ru" : "-s"} #{File.join(__dir__, "lib/libfixposix/binary/libfixposix.#{suffix}").inspect}"
 end

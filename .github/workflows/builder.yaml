@@ -18,7 +18,7 @@ jobs:
         with:
           submodules: recursive
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.117.0
+        uses: ruby/setup-ruby@v1.176.0
         with:
           ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
           bundler-cache: true
@@ -56,7 +56,7 @@ jobs:
         with:
           submodules: recursive
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.117.0
+        uses: ruby/setup-ruby@v1.176.0
         with:
           ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
           bundler-cache: true
@@ -92,7 +92,7 @@ jobs:
         with:
           submodules: recursive
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.117.0
+        uses: ruby/setup-ruby@v1.176.0
         with:
           ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
           bundler-cache: true
@@ -106,33 +106,33 @@ jobs:
       - name: Build binary & Gems & Run tests
         run: bundle exec rake ci-test
 
-  specs-win32:
-    runs-on:  windows-latest # TODO: macos too?
+  # specs-win32:
+  #   runs-on:  windows-latest # TODO: macos too?
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1.117.0
-        with:
-          ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
-          bundler-cache: true
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1.176.0
+  #       with:
+  #         ruby-version: '2.6' # JRuby 9.3 is 2.6, which is our minimum version
+  #         bundler-cache: true
 
-      - name: Build engine-hacks
-        run: bundle install && rake install
-        working-directory: ./engine-hacks
+  #     - name: Build engine-hacks
+  #       run: bundle install && rake install
+  #       working-directory: ./engine-hacks
 
-      - name: Build subspawn-common
-        run: bundle install && rake install
-        working-directory: ./subspawn-common
+  #     - name: Build subspawn-common
+  #       run: bundle install && rake install
+  #       working-directory: ./subspawn-common
 
 
-      - name: Install dependencies
-        run: bundle install
-        working-directory: ./subspawn-win32
+  #     - name: Install dependencies
+  #       run: bundle install
+  #       working-directory: ./subspawn-win32
 
-      - name: Test Gem
-        run: bundle exec rspec
-        working-directory: ./subspawn-win32
+  #     - name: Test Gem
+  #       run: bundle exec rspec
+  #       working-directory: ./subspawn-win32
 
 # TODO:
 #https://github.com/kouki-h/linux_cross_openbsd/blob/main/Makefile

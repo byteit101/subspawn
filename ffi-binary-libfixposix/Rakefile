@@ -6,6 +6,7 @@ require 'bundler'
 
 
 # currently supported binaries for building
+# [ruby-platform, gcc-target, docker-image-name]
 targets = [
 	%w{x86-linux i686-linux-gnu linux-x86},
 	%w{x86_64-linux x86_64-linux-gnu linux-x64},
@@ -17,7 +18,7 @@ targets = [
 	%w{riscv32-linux riscv32-linux-gnu linux-riscv32},
 	%w{riscv64-linux riscv64-linux-gnu linux-riscv64},
 	%w{x86_64-darwin x86_64-apple-darwin}, # UNTESTED
-	%w{arm64-darwin arm64-darwin}, # UNTESTED
+	%w{arm64-darwin arm64-apple-darwin}, # UNTESTED
 	%w{x86-freebsd i386-freebsd9 i386-freebsd9},
 	%w{x86_64-freebsd x86_64-freebsd9 x86_64-freebsd9},
 ]
@@ -127,6 +128,7 @@ task :binary, [:target] do |_, args|
 		# cross compiling mac
 		puts "Detected mac cross compiling"
 		recipe.configure_options += ["--target=arm64-apple-darwin", "CFLAGS=-target arm64-apple-darwin -arch arm64", "LDFLAGS=-target arm64-apple-darwin "] # why is it different? idk...
+		mactest = true
 	end
 	puts "Searching for host '#{host}'..."
 

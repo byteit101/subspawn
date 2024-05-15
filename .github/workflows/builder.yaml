@@ -13,8 +13,8 @@ jobs:
         os: [ubuntu-latest]
         subset: [linux-intel, linux-arm, freebsd-intel]
         include:
-          os: ubuntu-latest
-          os: macos-latest
+          - os: ubuntu-latest
+          - os: macos-latest
 
     runs-on:  ${{ matrix.os }}
     steps:
@@ -42,6 +42,8 @@ jobs:
 
       - name: Build binary & Gems
         run: bundle exec rake ${{ matrix.subset != 0 && 'ci-subset-run' || 'ci-run' }}
+        env:
+          BINARY_SET: ${{ matrix.subset}}
 
       - name: Attach shared libraries
         uses: actions/upload-artifact@v3

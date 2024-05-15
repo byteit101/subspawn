@@ -56,6 +56,26 @@ task "build" do
 	end
 end
 
+desc "Build LFP gems"
+task "buildlfp" do
+	cd "ffi-binary-libfixposix" do
+		sh 'rake binary'
+	end
+
+	# bindings require binary to build
+	require_relative './ffi-binary-libfixposix/lib/libfixposix/binary/version'
+	ENV["LIBFIXPOSIX_PATH"] = LFP::Binary::PATH
+	puts "LIBFIXPOSIX_PATH=#{LFP::Binary::PATH}"
+
+	cd "ffi-bindings-libfixposix" do
+		sh "rake build"
+		raise "Path error!" if Dir["pkg/*.gem"].to_s.include? "ERROR"
+	end
+	cd "ffi-binary-libfixposix" do
+		sh 'rake local'
+	end
+end
+
 desc 'Set up development environment'
 task "dev" => "generate:ffi"
 
@@ -128,7 +148,7 @@ task "ci-run" => %w{clean generate:ffi build} do
 end
 
 desc "CI actions for a subset"
-task "ci-subset-run" => %w{clean generate:ffi} do
+task "ci-subset-run" => %w{clean generate:ffi buildlfp} do
 	rm_rf "ci-output"
 
 	cd "ffi-binary-libfixposix" do

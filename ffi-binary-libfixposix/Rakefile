@@ -8,7 +8,7 @@ require 'bundler'
 # currently supported binaries for building
 # [ruby-platform, gcc-target, docker-image-name]
 targets = [
-	%w{x86-linux i686-linux-gnu linux-i386},
+	%w{x86-linux i686-linux-gnu linux-i686},
 	%w{x86_64-linux x86_64-linux-gnu linux-x64},
 	%w{arm64-linux aarch64-linux-gnu linux-arm64},
 	%w{armv7-linux armv7-linux-gnu linux-armv7},

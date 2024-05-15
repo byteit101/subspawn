@@ -22,7 +22,7 @@ if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-risc" ]; then
 	docker run --rm dockcross/linux-riscv64 > ./dockcross-linux-riscv64
 fi
 if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-intel" ]; then
-	docker run --rm dockcross/linux-i386 > ./dockcross-linux-i386
+	docker run --rm dockcross/linux-i686 > ./dockcross-linux-i686
 	docker run --rm dockcross/linux-x64 > ./dockcross-linux-x64
 	touched=true
 fi

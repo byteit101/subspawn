@@ -14,6 +14,7 @@ jobs:
         subset: [linux-intel, linux-arm, freebsd-intel]
         include:
           - os: ubuntu-latest
+            overall: yes
           - os: macos-latest
 
     runs-on:  ${{ matrix.os }}

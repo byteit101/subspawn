@@ -121,6 +121,7 @@ end
 desc "CI actions"
 task "ci-run" => %w{clean generate:ffi build} do
 	rm_rf "ci-output"
+	mkdir_p "ci-output/pkg/"
 
 	cd "ffi-binary-libfixposix" do
 		sh "rake clobber" # delete "old" local build files

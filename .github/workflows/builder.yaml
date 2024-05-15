@@ -11,7 +11,7 @@ jobs:
       matrix:
         # TODO: probably use older ones so that it runs on older ones
         os: [ubuntu-latest]
-        subset: [none, linux-intel, linux-arm, freebsd-intel]
+        subset: [rubygems, linux-intel, linux-arm, freebsd-intel]
         include:
           - os: macos-latest
 
@@ -31,7 +31,7 @@ jobs:
         run: brew install autoconf automake libtool pkgconfig
 
       - name: Pull and set up dockcross
-        if: matrix.os == 'ubuntu-latest' && matrix.subset != 'none'
+        if: matrix.os == 'ubuntu-latest' && matrix.subset != 'rubygems'
         run: cd binary-builders && ./setup.sh
         env:
           BINARY_SET: ${{ matrix.subset}}
@@ -40,7 +40,7 @@ jobs:
         run: bundle install
 
       - name: Build binary & Gems
-        run: bundle exec rake ${{ matrix.subset != 'none' && 'ci-subset-run' || 'ci-run' }}
+        run: bundle exec rake ${{ matrix.subset != 'rubygems' && 'ci-subset-run' || 'ci-run' }}
         env:
           BINARY_SET: ${{ matrix.subset}}
 

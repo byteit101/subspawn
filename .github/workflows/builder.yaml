@@ -40,12 +40,13 @@ jobs:
         run: bundle install
 
       - name: Build binary & Gems
-        run: bundle exec rake ${{ matrix.subset != 'rubygems' && 'ci-subset-run' || 'ci-run' }}
+        run: bundle exec rake ${{ matrix.os == 'ubuntu-latest' && matrix.subset != 'rubygems' && 'ci-subset-run' || 'ci-run' }}
         env:
           BINARY_SET: ${{ matrix.subset}}
 
       - name: Attach shared libraries
         uses: actions/upload-artifact@v3
+        if: matrix.os != 'ubuntu-latest' || matrix.subset != 'rubygems'
         with:
           name: shared-libraries
           path: ci-output/lib/

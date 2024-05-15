@@ -161,6 +161,41 @@ For unit testing, `subspawn` and `subspawn-posix` have rspec tests that run on M
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/byteit101/subspawn.
 
+# Binary CI
+
+Because SubSpawn grew out of the JRuby project, we aim for parity with the JRuby FFI platforms. As such, CI builds all platforms. 
+
+
+| jffi target                  | SubSpawn JRuby Support |
+|------------------------------|------------------------|
+| jffi-Darwin.jar              | {arm64,x86_64}-darwin  |
+| jffi-aarch64-FreeBSD.jar     |                        |
+| jffi-aarch64-Linux.jar       | arm64-linux            |
+| jffi-aarch64-Windows.jar     | :heavy_check_mark: (Uses FFI, no binary)    |
+| jffi-arm-Linux.jar           | armv{6,7}-linux        |
+| jffi-i386-FreeBSD.jar        | x86-freebsd            |
+| jffi-i386-Linux.jar          | x86-linux              |
+| jffi-i386-OpenBSD.jar        |                        |
+| jffi-i386-SunOS.jar          |                        |
+| jffi-i386-Windows.jar        | :heavy_check_mark: (Uses FFI, no binary)     |
+| jffi-loongarch64-Linux.jar   |                        |
+| jffi-mips64el-Linux.jar      |                        |
+| jffi-ppc-AIX.jar             |                        |
+| jffi-ppc-Linux.jar           |                        |
+| jffi-ppc64-AIX.jar           |                        |
+| jffi-ppc64-Linux.jar         |                        |
+| jffi-ppc64le-Linux.jar       |                        |
+| jffi-s390x-Linux.jar         |                        |
+| jffi-sparc-SunOS.jar         |                        |
+| jffi-sparcv9-Linux.jar       |                        |
+| jffi-sparcv9-SunOS.jar       |                        |
+| jffi-x86_64-DragonFlyBSD.jar |                        |
+| jffi-x86_64-FreeBSD.jar      | x86_64-freebsd         |
+| jffi-x86_64-Linux.jar        | x86_64-linux           |
+| jffi-x86_64-OpenBSD.jar      |                        |
+| jffi-x86_64-SunOS.jar        |                        |
+| jffi-x86_64-Windows.jar      | :heavy_check_mark: (Uses FFI, no binary)     |
+
 # License
 
 SubSpawn is licensed under a tri EPL/LGPL/Ruby license. You can use it, redistribute it and/or modify it under the terms of the:

@@ -56,6 +56,26 @@ task "build" do
 	end
 end
 
+desc "Build LFP gems"
+task "buildlfp" do
+	cd "ffi-binary-libfixposix" do
+		sh 'rake binary'
+	end
+
+	# bindings require binary to build
+	require_relative './ffi-binary-libfixposix/lib/libfixposix/binary/version'
+	ENV["LIBFIXPOSIX_PATH"] = LFP::Binary::PATH
+	puts "LIBFIXPOSIX_PATH=#{LFP::Binary::PATH}"
+
+	cd "ffi-bindings-libfixposix" do
+		sh "rake build"
+		raise "Path error!" if Dir["pkg/*.gem"].to_s.include? "ERROR"
+	end
+	cd "ffi-binary-libfixposix" do
+		sh 'rake local'
+	end
+end
+
 desc 'Set up development environment'
 task "dev" => "generate:ffi"
 
@@ -101,6 +121,7 @@ end
 desc "CI actions"
 task "ci-run" => %w{clean generate:ffi build} do
 	rm_rf "ci-output"
+	mkdir_p "ci-output/pkg/"
 
 	cd "ffi-binary-libfixposix" do
 		sh "rake clobber" # delete "old" local build files
@@ -116,14 +137,44 @@ task "ci-run" => %w{clean generate:ffi build} do
 				cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
 			end
 		else
+			# TODO: call all ci-subset-run targets when not in github?
+		end
+	end
+	unless RbConfig::CONFIG["target_os"].include? "darwin"
+		# now copy the other artifacts
+		%w{ffi-bindings-libfixposix engine-hacks subspawn-common subspawn-posix subspawn-win32 subspawn}.each do |folder|
+			cp Dir["#{folder}/pkg/*.gem"], "ci-output/pkg/" 
+		end
+	end
+end
+
+desc "CI actions for a subset"
+task "ci-subset-run" => %w{clean generate:ffi buildlfp} do
+	rm_rf "ci-output"
+
+	cd "ffi-binary-libfixposix" do
+		sh "rake clobber" # delete "old" local build files
+		if RbConfig::CONFIG["target_os"].include? "darwin"
+			raise "Cross compilation should only happen on linux GHA"
+		elsif ENV["BINARY_SET"].nil? or ENV["BINARY_SET"].empty? or !ENV["BINARY_SET"].include? '-'
+			raise "BINARY_SET env not set, must be set: '#{ENV['BINARY_SET']}'"
+		else
 			configs = {
 				linux: %w{x86 x86_64 armv6 armv7 arm64},
 				freebsd: %w{x86 x86_64}
 			}
-			#target_os = RbConfig::CONFIG["target_os"].match(/^([^\d]+)/)[1] # strip any trailing versions, like darwin19
-			#config = configs[target_os.to_sym]
-			#raise "Target OS not found in configuration: #{target_os}" unless config
-			configs.flat_map { |os, cpus| cpus.map{|cpu| "#{cpu}-#{os}"} }.each do |target|
+			subtargets = {
+				intel: %w{x86 x86_64},
+				arm: %w{armv6 armv7 arm64},
+			}
+			fore, aft = *ENV["BINARY_SET"].split("-")
+			os = fore.to_sym
+			cpus = configs[os].find_all{|x| subtargets[aft.to_sym].include? x}
+			if cpus.nil? or cpus.empty?
+				raise "No cpus found, is BINARY_SET wrong?"
+			end
+			cpus.map{|cpu| "#{cpu}-#{os}"}.each do |target|
+				puts "invoking cross for #{target}"
 				sh "rake clobber cross:#{target} target[#{target}]"
 				destdir = "../ci-output/lib/#{target}/"
 				mkdir_p destdir
@@ -131,12 +182,6 @@ task "ci-run" => %w{clean generate:ffi build} do
 				mkdir_p "../ci-output/pkg/"
 				cp Dir["../ffi-binary-libfixposix/pkg/*.gem"], "../ci-output/pkg/"
 			end
-		end
-	end
-	unless RbConfig::CONFIG["target_os"].include? "darwin"
-		# now copy the other artifacts
-		%w{ffi-bindings-libfixposix engine-hacks subspawn-common subspawn-posix subspawn-win32 subspawn}.each do |folder|
-			cp Dir["#{folder}/pkg/*.gem"], "ci-output/pkg/" 
 		end
 	end
 end

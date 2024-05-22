@@ -12,8 +12,7 @@ jobs:
       matrix:
         # TODO: probably use older ones so that it runs on older ones
         os: [ubuntu-latest]
-        # NOTE: https://github.com/MrDOS/freebsd-cross-build/issues/2 prohibits freebsd-arm from compiling right now
-        subset: [rubygems, OpenBSD-intel]
+        subset: [rubygems, freebsd-arm, linux-intel]
         #subset: [rubygems, OpenBSD-intel, freebsd-intel, freebsd-arm, linux-intel, linux-arm, linux-risc, linux-odd1]
         #include:
         #  - os: macos-12

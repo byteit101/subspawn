@@ -261,6 +261,7 @@ Key:
 | mips64el          | 3.10/2.17   |    |       |    |       |       |            |    
 | s390x             | 3.10/2.17   |    |       |    |       |       |            |
 | loongarch64       | 5.19/2.36   |    |       |    |       |       |            |
+| riscv32           |             |    |       |    |       |       |            |
 | riscv64           | 5.10/2.31   |    |       |    |       |       |            |
 | -Docker or runner-| ✔           |✔  | ✔     | ?IBM Cloud | ?Oracle Cloud |   ?   |            |
 

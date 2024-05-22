@@ -32,5 +32,9 @@ if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-intel" ]; then
 fi
 
 if [ $touched == "true" ] ; then
+	# fix the repository link
+	sed -i 's/DEFAULT_DOCKCROSS_IMAGE=dockcross/DEFAULT_DOCKCROSS_IMAGE=byteit101/' ./dockcross-*
+	#DEFAULT_DOCKCROSS_IMAGE=dockcross/jrubycrosslinux-x86_64:20240521-9dc1ddc
+
 	chmod +x ./dockcross-*
 fi

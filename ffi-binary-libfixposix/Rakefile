@@ -23,7 +23,7 @@ targets = [
 %w{x86_64-darwin 		x86_64-apple-darwin},					# Broken for macos 10.14 (5/24)
 %w{arm64-darwin			arm64-apple-darwin}, 					# Tested by headius 0.1.1/0.5.1.1 locally 4/2023
 # FreeBSD
-%w{arm64-freebsd11		arm64-freebsd11		arm64-freebsd11},    # UNTESTED
+%w{arm64-freebsd		arm64-freebsd11		arm64-freebsd11},    # UNTESTED
 %w{x86-freebsd			i386-freebsd9		i386-freebsd9}, 			# UNTESTED
 %w{x86_64-freebsd		x86_64-freebsd9		x86_64-freebsd9},		# Tested by byteit101 13.2 0.1.1/0.5.1.1 in VM 5/2024
 	# Local builds require: x86_64-freebsd-13 x86_64-portbld-freebsd13.2 (or whatever the version is)

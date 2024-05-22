@@ -10,24 +10,24 @@ fi
 
 # Just the linuxes here
 if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-odd1" ]; then
-	docker run --rm dockcross/linux-s390x > ./dockcross-linux-s390x
-	docker run --rm dockcross/linux-ppc64le > ./dockcross-linux-ppc64le
+	docker run --rm byteit101/jrubycrosslinux-s390x > ./dockcross-linux-s390x
+	docker run --rm byteit101/jrubycrosslinux-ppc64le > ./dockcross-linux-ppc64le
+	docker run --rm byteit101/jrubycrosslinux-loongarch64 > ./dockcross-linux-loongarch64
 	touched=true
 fi
 if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-arm" ]; then
-	docker run --rm dockcross/linux-arm64 > ./dockcross-linux-arm64
-	docker run --rm dockcross/linux-armv7 > ./dockcross-linux-armv7
-	docker run --rm dockcross/linux-armv6 > ./dockcross-linux-armv6
+	docker run --rm byteit101/jrubycrosslinux-arm64 > ./dockcross-linux-arm64
+	docker run --rm byteit101/jrubycrosslinux-armv6sf > ./dockcross-linux-arm
 	touched=true
 fi
 if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-risc" ]; then
-	docker run --rm dockcross/linux-riscv32 > ./dockcross-linux-riscv32
-	docker run --rm dockcross/linux-riscv64 > ./dockcross-linux-riscv64
+	docker run --rm byteit101/jrubycrosslinux-riscv64 > ./dockcross-linux-riscv64
+	docker run --rm byteit101/jrubycrosslinux-mips64le > ./dockcross-linux-mips64le
 	touched=true
 fi
 if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-intel" ]; then
-	docker run --rm dockcross/linux-i686 > ./dockcross-linux-i686
-	docker run --rm dockcross/linux-x64 > ./dockcross-linux-x64
+	docker run --rm byteit101/jrubycrosslinux-i686 > ./dockcross-linux-i686
+	docker run --rm byteit101/jrubycrosslinux-x86_64 > ./dockcross-linux-x64
 	touched=true
 fi
 

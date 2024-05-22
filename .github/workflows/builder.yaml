@@ -15,7 +15,7 @@ jobs:
         subset: [rubygems, linux-intel, linux-risc, linux-odd1]
         #subset: [rubygems, linux-intel, linux-arm, freebsd-intel]
         #include:
-        #  - os: macos-latest
+        #  - os: macos-12
 
     runs-on:  ${{ matrix.os }}
     steps:
@@ -29,7 +29,7 @@ jobs:
           bundler-cache: true
 
       - name: Install autoconf and automake for macOS
-        if: matrix.os == 'macos-latest'
+        if: matrix.os == 'macos-12'
         run: brew install autoconf automake libtool pkgconfig
 
       - name: Pull and set up dockcross

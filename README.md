@@ -166,36 +166,108 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/byteit
 Because SubSpawn grew out of the JRuby project, we aim for parity with the JRuby FFI platforms. As such, CI builds all platforms. 
 
 
-| jffi target                  | SubSpawn JRuby Support |
-|------------------------------|------------------------|
-| jffi-Darwin.jar              | {arm64,x86_64}-darwin  |
-| jffi-aarch64-FreeBSD.jar     |                        |
-| jffi-aarch64-Linux.jar       | arm64-linux            |
-| jffi-aarch64-Windows.jar     | :heavy_check_mark:     |
-| jffi-arm-Linux.jar           | armv{6,7}-linux        |
-| jffi-i386-FreeBSD.jar        | x86-freebsd            |
-| jffi-i386-Linux.jar          | x86-linux              |
-| jffi-i386-OpenBSD.jar        |                        |
-| jffi-i386-SunOS.jar          |                        |
-| jffi-i386-Windows.jar        | :heavy_check_mark:     |
-| jffi-loongarch64-Linux.jar   |                        |
-| jffi-mips64el-Linux.jar      |                        |
-| jffi-ppc-AIX.jar             |                        |
-| jffi-ppc-Linux.jar           |                        |
-| jffi-ppc64-AIX.jar           |                        |
-| jffi-ppc64-Linux.jar         |                        |
-| jffi-ppc64le-Linux.jar       |                        |
-| jffi-s390x-Linux.jar         |                        |
-| jffi-sparc-SunOS.jar         |                        |
-| jffi-sparcv9-Linux.jar       |                        |
-| jffi-sparcv9-SunOS.jar       |                        |
-| jffi-x86_64-DragonFlyBSD.jar |                        |
-| jffi-x86_64-FreeBSD.jar      | x86_64-freebsd         |
-| jffi-x86_64-Linux.jar        | x86_64-linux           |
-| jffi-x86_64-OpenBSD.jar      |                        |
-| jffi-x86_64-SunOS.jar        |                        |
-| jffi-x86_64-Windows.jar      | :heavy_check_mark:     |
+| jffi target                  | SubSpawn JRuby Support | byteit101's preference|
+|------------------------------|------------------------|--|
+| jffi-Darwin.jar              | {arm64,x86_64}-darwin  | |
+| jffi-aarch64-FreeBSD.jar     |                        |  |
+| jffi-aarch64-Linux.jar       | arm64-linux            |  |
+| jffi-aarch64-Windows.jar     | :heavy_check_mark:     |  |
+| jffi-arm-Linux.jar           | armv{6,7}-linux        | v6+ |
+| jffi-i386-FreeBSD.jar        | x86-freebsd            |  |
+| jffi-i386-Linux.jar          | x86-linux              |  |
+| jffi-i386-OpenBSD.jar        |                        |  |
+| jffi-i386-SunOS.jar          |                        | drop |
+| jffi-i386-Windows.jar        | :heavy_check_mark:     |  |
+| jffi-loongarch64-Linux.jar   |                        |  |
+| jffi-mips64el-Linux.jar      |                        |  |
+| jffi-ppc-AIX.jar             |                        | drop |
+| jffi-ppc-Linux.jar           |                        | drop |
+| jffi-ppc64-AIX.jar           |                        |  |
+| jffi-ppc64-Linux.jar         |                        | investigate/drop |
+| jffi-ppc64le-Linux.jar       | ppc64le-linux          |  |
+| jffi-s390x-Linux.jar         | s390x-linux            |  |
+| jffi-sparc-SunOS.jar         |                        | drop |
+| jffi-sparcv9-Linux.jar       |                        | investigate/drop |
+| jffi-sparcv9-SunOS.jar       |                        | investigate (jdk11 binaries exist, jdk17 don't) |
+| jffi-x86_64-DragonFlyBSD.jar |                        | Wait until RubyGems support |
+| jffi-x86_64-FreeBSD.jar      | x86_64-freebsd         |  |
+| jffi-x86_64-Linux.jar        | x86_64-linux           |  |
+| jffi-x86_64-OpenBSD.jar      |                        |  |
+| jffi-x86_64-SunOS.jar        |                        | drop |
+| jffi-x86_64-Windows.jar      | :heavy_check_mark:     |  |
+|  *                           | riscv32-linux          | maybe add |
+|  *                           | riscv64-linux          | add |
 
+| Architecture      |Linux |Mac |FreeBSD|AIX |Solaris|OpenBSD|DragonFlyBSD|
+|-------------------|------|----|-------|----|-------|-------|------------|
+| arm5              | ,T   |    |       |    |       |       |            |
+| arm6              | y?   |    |       |    |       |       |            |
+| arm7              | y ?  |    |       |    |       |       |            |
+| arm8/aarch64      | y,9T |y,9T| j     |    |       |       |            |        
+| i386              | y    |    | y     |    | j     | j     |            |
+| x86_64            | y,9T |y,9T| y     |    | j     | j     | j          |    
+| sparc             |      |    |       |    | j     |       |            |
+| sparcv9           | j-   |    |       |    | j     |       |            |    
+| ppc               | j*   |    |       |  j |       |       |            |
+| ppc64             | j*   |    |       |j,9T|       |       |            |
+| ppc64le           | y,9T |    |       |    |       |       |            |
+| mips              |      |    |       |    |       |       |            |
+| mipsel            |      |    |       |    |       |       |            |
+| mips64el          | j&   |    |       |    |       |       |            |    
+| s390x             | y,9T |    |       |    |       |       |            |
+| loongarch64       | j@   |    |       |    |       |       |            |
+| riscv32           | s    |    |       |    |       |       |            |
+| riscv64           | s,T  |    |       |    |       |       |            |
+| -Docker or runner-| ✔    |✔  | ✔     | ?IBM Cloud | ?Oracle Cloud |   ?   |            |
+
+Key:
+ - y = JFFI & subspawn CI
+ - j = jffi only
+ - s = Subspawn only
+ - 9 = J9 Semeru build
+ - T = Adoptium Temurin OpenJDK build
+ - _ = dockcross support
+ - * = crosstools-ng support (easy-ish dockcross support)
+ - - - partial ct-ng support
+
+// https://github.com/boxcutter/bsd 
+
+### Prebuild binary OS support
+
+ * Linux: 3.10 and glibc 2.17+ (Mostly, see table below)
+ * MacOS: 12
+ * FreeBSD: 9+
+ * OpenBSD: 6.8+
+ * DragonFlyBSD: No support until RubyGems adds support
+ * AIX: ???
+ * Solaris: ???
+ * Windows: 7+ (via direct FFI)
+
+
+| Architecture      |Linux        |Mac |FreeBSD|AIX |Solaris|OpenBSD|DragonFlyBSD|
+|-------------------|-------------|----|-------|----|-------|-------|------------|
+| armv5             |             |    |       |    |       |       |            |
+| armv6/armv7       | 3.12/2.17   |    |       |    |       |       |            |
+| arm8/aarch64      | 3.12/2.17   | 12 | 11.4  |    |       |       |            |        
+| i386              | 3.10/2.17   |    | 9.3   |    | -     | -*    |            |
+| x86_64            | 3.10/2.17   | 12 | 9.3   |    | -*    | 6.8   | *Rubygems  |    
+| sparc             |             |    |       |    | -     |       |            |
+| sparcv9           | -*          |    |       |    | -*    |       |            |    
+| ppc               | -           |    |       | -  |       |       |            |
+| ppc64             | 3.10/2.17   |    |       | ?? |       |       |            |
+| ppc64le           | 3.10/2.17   |    |       |    |       |       |            |
+| mips              |             |    |       |    |       |       |            |
+| mipsel            |             |    |       |    |       |       |            |
+| mips64el          | 3.10/2.17   |    |       |    |       |       |            |    
+| s390x             | 3.10/2.17   |    |       |    |       |       |            |
+| loongarch64       | 5.19/2.36   |    |       |    |       |       |            |
+| riscv64           | 5.10/2.31   |    |       |    |       |       |            |
+| -Docker or runner-| ✔           |✔  | ✔     | ?IBM Cloud | ?Oracle Cloud |   ?   |            |
+
+
+openbsd: add pkg-config make
+mkdir /usr/libexec/
+ln -s {/opt,}/usr/libexec/ld.so
 # License
 
 SubSpawn is licensed under a tri EPL/LGPL/Ruby license. You can use it, redistribute it and/or modify it under the terms of the:

@@ -69,12 +69,6 @@ task :cross, [:target] do |_, args|
 	else
 		""
 	end
-	# https://github.com/MrDOS/freebsd-cross-build/issues/2
-	stripper = if platform.downcase.include? "freebsd"
-		"strip"
-	else
-		"${CROSS_COMPILE}strip"
-	end
 	File.write(scriptsh, <<~SCRIPT)
 		#!/bin/sh
 		echo $CROSS_TRIPLE "---" #{host}
@@ -87,7 +81,7 @@ task :cross, [:target] do |_, args|
 		make -j4
 		make install DESTDIR=$outdir
 		#{fixbsd}
-		#{stripper} ../out/usr/lib/libfixposix.so
+		${CROSS_COMPILE}strip ../out/usr/lib/libfixposix.so
 	SCRIPT
 	chmod 0755, scriptsh
 	cd File.dirname(__dir__) do

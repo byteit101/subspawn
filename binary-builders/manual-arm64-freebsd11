@@ -25,5 +25,5 @@ $OCI_EXE run --rm $TTY_ARGS \
     --platform linux/amd64 \
     -v "$PWD":/workdir \
     "${USER_IDS[@]}" \
-    $FINAL_IMAGE binary-builders/build-freebsd-shim.sh arm64-freebsd11 "$@"
+    $FINAL_IMAGE binary-builders/build-freebsd-shim.sh arm64-freebsd11 settarget arm64-freebsd11 "$@"
 

@@ -12,8 +12,8 @@ jobs:
       matrix:
         # TODO: probably use older ones so that it runs on older ones
         os: [ubuntu-latest]
-        subset: [rubygems, linux-intel, linux-risc, linux-odd1]
-        #subset: [rubygems, linux-intel, linux-arm, freebsd-intel]
+        subset: [rubygems, openbsd-intel]
+        #subset: [rubygems, linux-intel, linux-arm, freebsd-intel, linux-risc, linux-odd1]
         #include:
         #  - os: macos-12
 

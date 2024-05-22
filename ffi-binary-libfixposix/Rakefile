@@ -55,7 +55,8 @@ targets.each do |(platform, host)|
 		task(:cross).invoke(platform)
 	end
 end
-#desc "Build the gem for [target] via [dockcross]"
+
+desc "Build the binary for [target] via [dockcross]"
 task :cross, [:target] do |_, args|
 	platform, host, docker = targets.find{|x| x.include? args[:target] }
 	rm_rf "tmp/#{platform}"
@@ -63,6 +64,11 @@ task :cross, [:target] do |_, args|
 	mkdir_p "tmp/#{platform}/out"
 	scriptsh = "tmp/#{platform}/build.sh"
 	fix32bit = ""
+	fixbsd = if platform.downcase.include? "openbsd"
+		"mv ../out/usr/lib/libfixposix.so.* ../out/usr/lib/libfixposix.so"
+	else
+		""
+	end
 	File.write(scriptsh, <<~SCRIPT)
 		#!/bin/sh
 		echo $CROSS_TRIPLE "---" #{host}
@@ -71,10 +77,10 @@ task :cross, [:target] do |_, args|
 		source=$PWD/libfixposix
 		outdir=$(realpath $(dirname $0)/out)
 		cd `dirname $0`/conf
-		# i686 fails to build
 		$source/configure --enable-shared --disable-static --without-debug --host=#{host} --build x86_64-linux-gnu --prefix=/usr/ #{fix32bit}
 		make -j4
 		make install DESTDIR=$outdir
+		#{fixbsd}
 		${CROSS_COMPILE}strip ../out/usr/lib/libfixposix.so
 	SCRIPT
 	chmod 0755, scriptsh
@@ -157,7 +163,7 @@ task :binary, [:target] do |_, args|
 	suffix = host.include?("darwin") ? "dylib" : "so"
 	recipe.cook # always rebuild, never cache
 	#recipe.activate
-	openbsdsuffix = if host.include?("openbsd") and !File.exist?(File.join(recipe.path, "lib/libfixposix.#{suffix}"))
+	openbsdsuffix = if host.downcase.include?("openbsd") and !File.exist?(File.join(recipe.path, "lib/libfixposix.#{suffix}"))
 		Dir[File.join(recipe.path, "lib/libfixposix.so*")].first.split("libfixposix.so").last
 	else
 		""
@@ -184,10 +190,10 @@ task "local:raw" => :binary do
 	Bundler.ui.confirm "#{spec.name} #{spec.version} built to pkg/#{File.basename(Dir[File.join(__dir__, "pkg", "#{spec.name}-*.gem")].sort_by {|f| File.mtime(f) }.last)}."
 end
 
-CLOBBER.include("pkg")
+CLOBBER.include("pkg/**/*", "pkg")
 CLEAN.include(
-	"ports",
-	"tmp",
+	"ports/**/*", "ports",
+	"tmp/**/*", "tmp",
 	"lib/libfixposix/binary/libfixposix.so",
 	"lib/libfixposix/binary/libfixposix.dylib"
 )

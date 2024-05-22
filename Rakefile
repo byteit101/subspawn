@@ -161,7 +161,8 @@ task "ci-subset-run" => %w{clean generate:ffi buildlfp} do
 		else
 			configs = {
 				linux: %w{x86 x86_64 armv6 armv7 arm64 riscv32 riscv64 ppc64le s390x},
-				freebsd: %w{x86 x86_64}
+				freebsd: %w{x86 x86_64},
+				OpenBSD: %w{x86_64},
 			}
 			subtargets = {
 				intel: %w{x86 x86_64},

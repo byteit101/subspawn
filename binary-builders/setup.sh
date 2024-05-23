@@ -35,6 +35,8 @@ fi
 if [ $touched == "true" ] ; then
 	# fix the repository link
 	sed -i 's/DEFAULT_DOCKCROSS_IMAGE=dockcross/DEFAULT_DOCKCROSS_IMAGE=byteit101/' ./dockcross-*
+	# fix me uploading the wrong tags sometimes
+	sed -i 's/DEFAULT_DOCKCROSS_IMAGE=\(.*\):20.*/DEFAULT_DOCKCROSS_IMAGE=\1:latest/' ./dockcross-*
 	#DEFAULT_DOCKCROSS_IMAGE=dockcross/jrubycrosslinux-x86_64:20240521-9dc1ddc
 
 	chmod +x ./dockcross-*

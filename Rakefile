@@ -167,7 +167,7 @@ task "ci-subset-run" => %w{clean generate:ffi buildlfp} do
 			subtargets = {
 				intel: %w{x86 x86_64},
 				arm: %w{arm arm64 aarch64},
-				risc: %w{riscv64 mips64le loongarch64},
+				risc: %w{riscv64 mips64el loongarch64},
 				odd1: %w{ppc64 ppc64le s390x},
 			}
 			fore, aft = *ENV["BINARY_SET"].split("-")

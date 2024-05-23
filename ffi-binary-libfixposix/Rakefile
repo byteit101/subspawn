@@ -15,9 +15,10 @@ targets = [
 %w{arm-linux			armv6-linux-gnu			linux-arm},			# UNTESTED (raspi v1) works on v7hf as "arm-linux"
 	# "armv7l-linux-eabihf", etc for rubygems D-:
 %w{s390x-linux			s390x-ibm-linux-gnu		linux-s390x},		# Tested by byteit101 Deb12 0.1.1/0.5.1.1+ in VM 5/2024
+%w{ppc64-linux			ppc64-linux-gnu			linux-ppc64},		# UNTESTED
 %w{ppc64le-linux		ppc64le-linux-gnu		linux-ppc64le},		# UNTESTED
 %w{riscv64-linux		riscv64-linux-gnu		linux-riscv64},		# UNTESTED
-%w{mips64le-linux		mips64le-linux-gnu		linux-mips64el},	# UNBUILT, UNTESTED
+%w{mips64el-linux		mips64el-linux-gnu		linux-mips64el},	# UNBUILT, UNTESTED
 %w{loongarch64-linux	loongarch64-linux-gnu	linux-loongarch64},	# UNBUILT, UNTESTED
 # MacOS
 %w{x86_64-darwin 		x86_64-apple-darwin},					# Broken for macos 10.14 (5/24)

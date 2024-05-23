@@ -204,11 +204,11 @@ Because SubSpawn grew out of the JRuby project, we aim for parity with the JRuby
 | arm6              | y?   |    |       |    |       |       |            |
 | arm7              | y ?  |    |       |    |       |       |            |
 | arm8/aarch64      | y,9T |y,9T| j     |    |       |       |            |        
-| i386              | y    |    | y     |    | j     | j     |            |
+| i386              | y    |    | y<    |    | j     | j<    |            |
 | x86_64            | y,9T |y,9T| y     |    | j     | j     | j          |    
-| sparc             |      |    |       |    | j     |       |            |
+| sparc             |      |    |       |    | j<    |       |            |
 | sparcv9           | j-   |    |       |    | j     |       |            |    
-| ppc               | j*   |    |       |  j |       |       |            |
+| ppc               | j*<  |    |       |  j |       |       |            |
 | ppc64             | j*   |    |       |j,9T|       |       |            |
 | ppc64le           | y,9T |    |       |    |       |       |            |
 | mips              |      |    |       |    |       |       |            |
@@ -220,6 +220,7 @@ Because SubSpawn grew out of the JRuby project, we aim for parity with the JRuby
 | riscv64           | s,T  |    |       |    |       |       |            |
 | -Docker or runner-| ✔    |✔  | ✔     | ?IBM Cloud | ?Oracle Cloud |   ?   |            |
 
+
 Key:
  - y = JFFI & subspawn CI
  - j = jffi only
@@ -229,6 +230,7 @@ Key:
  - _ = dockcross support
  - * = crosstools-ng support (easy-ish dockcross support)
  - - - partial ct-ng support
+ - < = not shipped by jruby
 
 // https://github.com/boxcutter/bsd 
 
@@ -262,9 +264,10 @@ Key:
 | s390x             | 3.10/2.17   |    |       |    |       |       |            |
 | loongarch64       | 5.19/2.36   |    |       |    |       |       |            |
 | riscv32           |             |    |       |    |       |       |            |
-| riscv64           | 5.10/2.31   |    |       |    |       |       |            |
+| riscv64           | 5.10/2.35   |    |       |    |       |       |            |
 | -Docker or runner-| ✔           |✔  | ✔     | ?IBM Cloud | ?Oracle Cloud |   ?   |            |
 
+https://github.com/byteit101/jruby-dockcross
 
 openbsd: add pkg-config make
 mkdir /usr/libexec/

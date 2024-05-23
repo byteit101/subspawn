@@ -12,10 +12,9 @@ jobs:
       matrix:
         # TODO: probably use older ones so that it runs on older ones
         os: [ubuntu-latest]
-        subset: [rubygems, freebsd-arm, linux-intel]
-        #subset: [rubygems, OpenBSD-intel, freebsd-intel, freebsd-arm, linux-intel, linux-arm, linux-risc, linux-odd1]
-        #include:
-        #  - os: macos-12
+        subset: [rubygems, OpenBSD-intel, freebsd-intel, freebsd-arm, linux-intel, linux-arm, linux-risc, linux-odd1]
+        include:
+          - os: macos-12
 
     runs-on:  ${{ matrix.os }}
     steps:

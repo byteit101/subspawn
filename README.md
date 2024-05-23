@@ -166,37 +166,37 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/byteit
 Because SubSpawn grew out of the JRuby project, we aim for parity with the JRuby FFI platforms. As such, CI builds all platforms. 
 
 
-| jffi target                  | SubSpawn JRuby Support | byteit101's preference|
-|------------------------------|------------------------|--|
-| jffi-Darwin.jar              | {arm64,x86_64}-darwin  | |
-| jffi-aarch64-FreeBSD.jar     |                        |  |
-| jffi-aarch64-Linux.jar       | arm64-linux            |  |
-| jffi-aarch64-Windows.jar     | :heavy_check_mark:     |  |
-| jffi-arm-Linux.jar           | armv{6,7}-linux        | v6+ |
-| jffi-i386-FreeBSD.jar        | x86-freebsd            |  |
-| jffi-i386-Linux.jar          | x86-linux              |  |
-| jffi-i386-OpenBSD.jar        |                        |  |
-| jffi-i386-SunOS.jar          |                        | drop |
-| jffi-i386-Windows.jar        | :heavy_check_mark:     |  |
-| jffi-loongarch64-Linux.jar   |                        |  |
-| jffi-mips64el-Linux.jar      |                        |  |
-| jffi-ppc-AIX.jar             |                        | drop |
-| jffi-ppc-Linux.jar           |                        | drop |
-| jffi-ppc64-AIX.jar           |                        |  |
-| jffi-ppc64-Linux.jar         |                        | investigate/drop |
-| jffi-ppc64le-Linux.jar       | ppc64le-linux          |  |
-| jffi-s390x-Linux.jar         | s390x-linux            |  |
-| jffi-sparc-SunOS.jar         |                        | drop |
-| jffi-sparcv9-Linux.jar       |                        | investigate/drop |
-| jffi-sparcv9-SunOS.jar       |                        | investigate (jdk11 binaries exist, jdk17 don't) |
-| jffi-x86_64-DragonFlyBSD.jar |                        | Wait until RubyGems support |
-| jffi-x86_64-FreeBSD.jar      | x86_64-freebsd         |  |
-| jffi-x86_64-Linux.jar        | x86_64-linux           |  |
-| jffi-x86_64-OpenBSD.jar      |                        |  |
-| jffi-x86_64-SunOS.jar        |                        | drop |
-| jffi-x86_64-Windows.jar      | :heavy_check_mark:     |  |
-|  *                           | riscv32-linux          | maybe add |
-|  *                           | riscv64-linux          | add |
+| jffi target                  | SubSpawn JRuby Support | jruby target       | byteit101's preference                          |
+| ---------------------------- | ---------------------- | ------------------ | ----------------------------------------------- |
+| jffi-Darwin.jar              | {arm64,x86_64}-darwin  | :heavy_check_mark: |                                                 |
+| jffi-aarch64-FreeBSD.jar     | arm64-freebsd          | :heavy_check_mark: |                                                 |
+| jffi-aarch64-Linux.jar       | arm64-linux            | :heavy_check_mark: |                                                 |
+| jffi-aarch64-Windows.jar     | :heavy_check_mark:     | :heavy_check_mark: |                                                 |
+| jffi-arm-Linux.jar           | armv6sf-linux          | :heavy_check_mark: | v6+                                             |
+| jffi-i386-FreeBSD.jar        | x86-freebsd            |                    |                                                 |
+| jffi-i386-Linux.jar          | x86-linux              | :heavy_check_mark: |                                                 |
+| jffi-i386-OpenBSD.jar        |                        |                    |                                                 |
+| jffi-i386-SunOS.jar          |                        | :heavy_check_mark: | drop                                            |
+| jffi-i386-Windows.jar        | :heavy_check_mark:     | :heavy_check_mark: |                                                 |
+| jffi-loongarch64-Linux.jar   | loongarch64-linux      | :heavy_check_mark: |                                                 |
+| jffi-mips64el-Linux.jar      | mips64el-linux         | :heavy_check_mark: |                                                 |
+| jffi-ppc-AIX.jar             |                        | :heavy_check_mark: | drop                                            |
+| jffi-ppc-Linux.jar           |                        |                    | drop                                            |
+| jffi-ppc64-AIX.jar           |                        | :heavy_check_mark: |                                                 |
+| jffi-ppc64-Linux.jar         | ppc64-linux            | :heavy_check_mark: | investigate/drop                                |
+| jffi-ppc64le-Linux.jar       | ppc64le-linux          | :heavy_check_mark: |                                                 |
+| jffi-s390x-Linux.jar         | s390x-linux            | :heavy_check_mark: |                                                 |
+| jffi-sparc-SunOS.jar         |                        |                    | drop                                            |
+| jffi-sparcv9-Linux.jar       |                        | :heavy_check_mark: | investigate/drop                                |
+| jffi-sparcv9-SunOS.jar       |                        | :heavy_check_mark: | investigate (jdk11 binaries exist, jdk17 don't) |
+| jffi-x86_64-DragonFlyBSD.jar |                        | :heavy_check_mark: | Wait until RubyGems support                     |
+| jffi-x86_64-FreeBSD.jar      | x86_64-freebsd         | :heavy_check_mark: |                                                 |
+| jffi-x86_64-Linux.jar        | x86_64-linux           | :heavy_check_mark: |                                                 |
+| jffi-x86_64-OpenBSD.jar      | x86_64-openbsd         | :heavy_check_mark: |                                                 |
+| jffi-x86_64-SunOS.jar        |                        | :heavy_check_mark: | drop                                            |
+| jffi-x86_64-Windows.jar      | :heavy_check_mark:     | :heavy_check_mark: |                                                 |
+| *(riscv32-linux)             |                        |                    | maybe add                                       |
+| *                            | riscv64-linux          |                    | add                                             |
 
 | Architecture      |Linux |Mac |FreeBSD|AIX |Solaris|OpenBSD|DragonFlyBSD|
 |-------------------|------|----|-------|----|-------|-------|------------|

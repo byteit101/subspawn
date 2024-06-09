@@ -22,7 +22,7 @@ if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-arm" ]; then
 fi
 if [ ${BINARY_SET} == "ALL" ] || [ ${BINARY_SET} == "linux-risc" ]; then
 	docker run --rm byteit101/jrubycrosslinux-riscv64 > ./dockcross-linux-riscv64
-	docker run --rm byteit101/jrubycrosslinux-mips64le > ./dockcross-linux-mips64le
+	docker run --rm byteit101/jrubycrosslinux-mips64el > ./dockcross-linux-mips64el
 	docker run --rm byteit101/jrubycrosslinux-loongarch64 > ./dockcross-linux-loongarch64
 	touched=true
 fi

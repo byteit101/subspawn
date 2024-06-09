@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+FINAL_IMAGE=empterdose/freebsd-cross-build:11.4
+# other options: 
+
+
+
+# If OCI_EXE is not already set, search for a container executor (OCI stands for "Open Container Initiative")
+if [ -z "$OCI_EXE" ]; then
+    if which podman >/dev/null 2>/dev/null; then
+        OCI_EXE=podman
+    elif which docker >/dev/null 2>/dev/null; then
+        OCI_EXE=docker
+    else
+        die "Cannot find a container executor. Search for docker and podman."
+    fi
+fi
+
+set -x
+if [ "$OCI_EXE" != "podman" ]; then
+    USER_IDS=(--user $( id -u ):$( id -g ))
+fi
+TTY_ARGS=-it
+$OCI_EXE run --rm $TTY_ARGS \
+    --platform linux/amd64 \
+    -v "$PWD":/workdir \
+    "${USER_IDS[@]}" \
+    $FINAL_IMAGE binary-builders/build-freebsd-shim.sh arm64-freebsd11 settarget arm64-freebsd11 "$@"
+

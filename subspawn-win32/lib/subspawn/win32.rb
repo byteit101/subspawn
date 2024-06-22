@@ -1,6 +1,6 @@
 require 'subspawn/win32/version'
 require 'subspawn/win32/ffi'
-require 'subspawn/win32/raw_status'
+require 'subspawn/common/raw_status'
 require 'engine-hacks'
 module SubSpawn
 class SpawnError < RuntimeError
@@ -210,6 +210,11 @@ class Win32
 			end
 		end
 		out_pid
+	end
+
+	# TODO: Windows should defer pipe creation
+	def pipe_defer &create_pipe
+		yield
 	end
 	
 	# TODO: allow io on left?

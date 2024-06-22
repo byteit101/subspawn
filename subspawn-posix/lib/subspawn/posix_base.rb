@@ -135,6 +135,11 @@ class POSIX
 		end
 		out_pid
 	end
+
+	# POSIX doesn't defer pipe creation, execute immediately
+	def pipe_defer
+		yield
+	end
 	
 	# TODO: allow io on left?
 	def fd(number, io_or_fd)
@@ -296,7 +301,7 @@ class POSIX
 
 	COMPLETE_VERSION = {
 		subspawn_posix: SubSpawn::POSIX::VERSION,
-		libfixposix: LFP::COMPLETE_VERSION,
+		libfixposix: (LFP::COMPLETE_VERSION rescue nil),
 	}
 
 	private
@@ -346,6 +351,7 @@ class POSIX
 		case source
 		when Integer then source
 		when IO then source
+		when Common::DeferredPipe then source
 		when :in, :out, :err
 			Std[source]
 		else
@@ -356,6 +362,7 @@ class POSIX
 		case source
 		when Integer then source
 		when IO then source.fileno
+		when Common::DeferredPipe then source.fileno
 		when :in, :out, :err
 			Std[source]
 		else

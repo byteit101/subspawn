@@ -3,7 +3,7 @@ require 'subspawn/version'
 require 'subspawn/fd_parse'
 if FFI::Platform.unix?
 	require 'subspawn/posix'
-	SubSpawn::Platform = SubSpawn::POSIX
+	SubSpawn::Platform = SubSpawn::POSIX_Platform
 elsif FFI::Platform.windows?
 	require 'subspawn/win32'
 	SubSpawn::Platform = SubSpawn::Win32
@@ -247,8 +247,8 @@ module SubSpawn
 		ensure
 			tty.close unless tty.closed?
 			# MRI waits this way to ensure the process is reaped
-			if Process.waitpid(pid, Process::WNOHANG).nil?
-				Process.detach(pid)
+			if SubSpawn.waitpid(pid, Process::WNOHANG).nil?
+				SubSpawn.detach_native(pid)
 			end
 		end
 	end
@@ -284,9 +284,12 @@ module SubSpawn
 
 		# create a proxy to close the process
 		io_proxy = looking.length == 1 ? SubSpawn::Common::ClosableIO : SubSpawn::Common::BidiMergedIOClosable
+		already_waited = false
 		io = io_proxy.new(*looking.map{|x|rawio[x]}) do
 			# MRI waits this way to ensure the process is reaped
-			Process.waitpid(pid) # TODO: I think there isn't a WNOHANG here
+			status = SubSpawn.waitpid(pid) # TODO: I think there isn't a WNOHANG here
+			already_waited = true
+			status
 		end
 
 		# return or call
@@ -296,8 +299,8 @@ module SubSpawn
 		ensure
 			io.close unless io.closed?
 			# MRI waits this way to ensure the process is reaped
-			if Process.waitpid(pid, Process::WNOHANG).nil?
-				Process.detach(pid)
+			if !already_waited and SubSpawn.waitpid(pid, Process::WNOHANG).nil?
+				SubSpawn.detach_native(pid)
 			end
 		end
 	end
@@ -305,7 +308,7 @@ module SubSpawn
 	# Windows doesn't like mixing and matching who is spawning and who is waiting, so use
 	# subspawn.wait* if you used subspawn.spawn*, while using process.wait* if you used Process.spawn*
 	# though if you replace process, then it's a moot point
-	if SubSpawn::Platform.method_defined? :waitpid2
+	if SubSpawn::Platform.respond_to? :waitpid2
 		def self.wait(*args)
 			waitpid *args
 		end
@@ -320,6 +323,9 @@ module SubSpawn
 		end
 		def self.last_status
 			SubSpawn::Platform.last_status
+		end
+		def self.detach_native(pid)
+			SubSpawn.detach(pid)
 		end
 	else
 		def self.wait(*args)
@@ -336,6 +342,9 @@ module SubSpawn
 		end
 		def self.last_status
 			Process.last_status
+		end
+		def self.detach_native(pid)
+			Process.detach(pid)
 		end
 	end
 

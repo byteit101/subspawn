@@ -1,3 +1,4 @@
+# FdSource is used in the graph algorithm before being realized via .apply()
 module SubSpawn::Internal
 	class FdSource
 		def initialize(dests, all_dests=dests)
@@ -69,6 +70,7 @@ module SubSpawn::Internal
 			def to_dbg
 				[@dests, @value]
 			end
+			# Should return an IoHolder to pass to the spawn() caller, or nil
 			def apply base
 				raw_apply base, @value
 			end
@@ -114,7 +116,9 @@ module SubSpawn::Internal
 				@dir = dir
 			end
 			def apply base
-				@saved ||= IO.pipe
+				# base.pipe_defer must return an [io, io], or something that responds to .fileno
+				# it will then be passed into .fd() and .fd_close
+				@saved ||= base.pipe_defer { IO.pipe }
 				r, w = {read: @saved, write: @saved.reverse}[@dir]
 				raw_apply base, r
 				@dests.each {|dest| base.fd_close(w) } # if you want the other end, pass it in yourself

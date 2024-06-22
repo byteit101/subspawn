@@ -2,6 +2,8 @@
 
 SubSpawn wrapper over libfixposix. Install `ffi-binary-libfixposix` if you need binaries.
 
+Also contains a JRuby fallback backend
+
 ## Installation
 
 Install the gem and add to the application's Gemfile by executing:

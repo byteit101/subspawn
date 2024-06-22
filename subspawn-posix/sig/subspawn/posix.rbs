@@ -32,6 +32,8 @@ module SubSpawn
 		def fd_open: (FD dest, String path, ?Integer flags, ?Integer create_file_mode) -> self
 		def fd_keep: (FD) -> self
 		def fd_close: (FD) -> self
+    # used for non-posix platforms to defer pipe object creation
+    def pipe_defer: () { () -> [FD, FD] } -> [FD, FD]
 
 		# Head control
 		def sid!: () -> self

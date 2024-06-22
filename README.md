@@ -113,6 +113,8 @@ subspawn-posix
 -----------
 The mid-level API for Unixy machines. Exposes all the capabilities of libfixposix with none of the hassle of C or FFI. Look at the included RBS file for all methods and types. Also includes minimal PTY opening helper.
 
+As a backup, it also inclues a JRuby fallback that is very limited, but has basic functionality. If you are using the JRuby fallback, please report a bug for your platform, and then compile libfixposix and jffi for your platform.
+
 subspawn-win32
 -----------
 The mid-level API for Windows machines. Win32 API's are exposed via FFI, then regularized via the mid-level API, like subspawn-posix. Also includes an early PTY <-> ConPTY translation layer. Yes, you heard that right, PTY.open/PTY.spawn on Windows! (Require [ConPTY from Windows 10 1803](https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/) or later)

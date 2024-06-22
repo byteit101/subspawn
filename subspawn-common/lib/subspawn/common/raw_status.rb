@@ -1,5 +1,8 @@
 # JRuby and CRuby both do internal things to build the status, so I think we can mostly just override it
 # without checking
+if defined? JRUBY_VERSION
+	Process.send(:remove_const, :Status)
+end
 module Process
 	class Status
 		def initialize(pid, status=nil, termsig=nil)

@@ -27,7 +27,12 @@ class SubSpawn::IoHolder
 			@parent, @child = parent, child
 		end
 		attr_reader :parent, :child
-		alias :to_io :parent
+		def to_io
+			@parent = @parent.lazy_resolve if @parent.respond_to? :lazy_resolve
+			@parent
+		end
+		# NOTE: fileno may change if we are on a platform that does lazy resolution (jruby-fallback-backend)
+		# in such cases, fileno is synthetic anyway
 		def fileno
 			@parent.fileno
 		end

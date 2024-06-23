@@ -142,6 +142,41 @@ API guarantees:
  * subspawn-`$PLATFORM` may change from 0.1 to 0.2, etc
  * subspawn (high-level) will otherwise use semantic versioning
 
+API support
+-------------
+
+There are 3 platforms, and they don't all support the same features. Here is a matrix of what features each platform supports
+
+| Feature                   | libfixposix+ffi    | Win32 API           | JRuby Fallback (JDK) |
+|---------------------------|--------------------|---------------------|----------------------|
+| basic spawn               | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:   |
+| basic waitpid             | :x:/Built-in       | :heavy_check_mark:  | :heavy_check_mark:   |
+| full waitpid              | :x:/Built-in       | :heavy_check_mark:* | :x:                  |
+| working directory (cwd)   | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:   |
+| env                       | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:   |
+| set argv[0]               | :heavy_check_mark: | N/A                 | :x:                  |
+| redirect stdio (file, pipe, inherit, close) | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:   |
+| merge stdio               | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:   |
+| stdio in select           | :heavy_check_mark: | ?                   | :x:                  |
+| arbitrary io redirections | :heavy_check_mark: | :x:                 | :x:                  |
+| arbitrary io opens        | :heavy_check_mark: | :x:                 | :x:                  |
+| arbitrary io closes       | :heavy_check_mark: | ?                   | :x:                  |
+| pgroup                    | :heavy_check_mark: | N/A                 | :x:                  |
+| sid                       | :heavy_check_mark: | N/A                 | :x:                  |
+| pty                       | :heavy_check_mark: | WIP                 | :x:                  |
+| umask                     | :heavy_check_mark: | N/A                 | :x:                  |
+| signals                   | :heavy_check_mark: | N/A                 | :x:                  |
+| rlimits                   | :heavy_check_mark: | :x:                 | :x:                  |
+
+
+
+There are 2 APIs: the Ruby API, and the SubSpawn API. They are mostly the same, but have a few important differences:
+
+ * `Process.spawn` and `IO.popen` allow single-string commands. `SubSpawn.spawn` and `SubSpawn.popen` do not allow this for security reasons. Use a array of strings instead.
+ * `SubSpawn.spawn` returns a `[pid, iomap]` pair, where `iomap[2]` is whatever you redirected stderr to. This allows SubSpawn to return all the io redirections at once. This is especially important for the JRuby Fallback. `iomap[:pty]` is the PTY master
+ * `SubSpawn.*` functions allow extra options and redirections. In addition to `FD`, `:close`, and other `Process.spawn` redirection values, they alow specifying `:pipe`, `:pipe_r`, `:pipe_w`, `:pty`, `:tty`, `File` objects, `java.io.File` objects, and `java.nio.Path` objects. When using SubSpawn replacement, `Process.spawn` and `IO.popen` are agumented too.
+ * `SubSpawn.wait*`, `SubSpawn.detach`, and `SubSpawn.last_status` mirror the same functions in `Process`. The Win32 and JRuby fallback platforms define them separarely, unless using replacement. Mixing and matching should not be done unless using libfixposix or replacement.
+
 # Development
 
 After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.

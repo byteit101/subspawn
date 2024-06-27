@@ -179,7 +179,7 @@ There are 2 APIs: the Ruby API, and the SubSpawn API. They are mostly the same, 
 
 # Development
 
-After checking out the repo, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment.
+After checking out the repo with `--recursive`, run `bundle install` to install dependencies. Then, run `bundle exec rake dev` to set up a working environment. Note: CAST, used by the binary package to parse the libfixposix header, requires a native extension. As such, the first time you do this, it must be with CRuby/MRI, and NOT JRuby. Subsequent development can be done with any ruby.
 
 To build the binary locally for development (highly recommended): `cd ffi-binary-libfixposix && rake local`
 

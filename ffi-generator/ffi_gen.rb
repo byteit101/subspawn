@@ -331,7 +331,7 @@ EOS
 		name = name[base.length..-1]
 		if map.include? name # class!
 			# just make sizeof
-			[:class, name, name.split("_").map(&:capitalize).join(), s.members.map{|m| csizeof(m.type)}.sum]
+			[:class, name, name.split("_").map(&:capitalize).join(), csizeof_struct(s.members.map(&:type))]
 		else # struct only
 			sname = name2type(s.name, base)
 			layout = s.members.flat_map do |mem|
@@ -346,6 +346,18 @@ EOS
 			layout = "layout #{layout.map{|x|x.join("")}.join("\n\t")}"
 			[:struct, name, layout]
 		end
+	end
+	# C pads each member to its alignment and the struct to its widest member,
+	# so a plain sum undercounts (e.g. a bool followed by a pointer)
+	def csizeof_struct(types)
+		maxalign = 1
+		size = types.reduce(0) do |offset, type|
+			sz = csizeof(type)
+			align = [sz, 8].min
+			maxalign = [maxalign, align].max
+			(offset + align - 1) / align * align + sz
+		end
+		(size + maxalign - 1) / maxalign * maxalign
 	end
 	def csizeof(type)
 		ptrsize = 8  #NOTE: assumes 64 bit, as there are no 128 bit machines 

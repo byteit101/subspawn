@@ -239,13 +239,14 @@ module SubSpawn
 		# TODO: MRI tries to pull the shell out of the ENV var, but that seems wrong
 		pid, args = SubSpawn.spawn(args, {[:in, :out, :err, :tty] => :pty, :sid => true}.merge(opts))
 		tty = args[:tty]
-		list = [tty, tty, pid]
+		# MRI hands out separate reader and writer IOs, so closing one leaves the other open
+		list = [tty, tty.dup, pid]
 		return list unless block_given?
 
 		begin
 			return block.call(*list)
 		ensure
-			tty.close unless tty.closed?
+			list[0, 2].each { |io| io.close unless io.closed? }
 			# MRI waits this way to ensure the process is reaped
 			if SubSpawn.waitpid(pid, Process::WNOHANG).nil?
 				SubSpawn.detach_native(pid)

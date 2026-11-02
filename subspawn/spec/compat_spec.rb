@@ -177,6 +177,23 @@ RSpec.describe SubSpawn do
 			end
 		end
 
+		it "pty_spawn returns a reader that stays open when the writer is closed" do
+			r, w, pid = SubSpawn.pty_spawn_compat("echo", "hi")
+			expect(r).not_to equal(w)
+			expect(r.fileno).not_to eq(w.fileno)
+			w.close
+			expect(r).not_to be_closed
+			output = +""
+			begin
+				loop { output << r.readpartial(100) }
+			rescue EOFError, Errno::EIO
+			end
+			expect(output).to eq("hi\r\n")
+		ensure
+			r&.close unless r&.closed?
+			Process.wait(pid) if pid
+		end
+
 		it "does child stuff" do
 			# pid = SubSpawn.spawn_shell("sleep 3").first
 			# p pid
